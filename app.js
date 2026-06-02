@@ -1,100 +1,177 @@
-const CONFIG = {
-  API_URL: "https://script.google.com/macros/s/AKfycbz7wVlTcE_FTXb9e_PfjDEFw5vv-1DHx4WrfwxP3gE-H1Ssq70-hTg08JRK4W49shzXEg/exec",
-  EDIT_CODE: "2026"
-};
+        const endLine = Math.round((clampedEnd - first) / 30) + 2;
+        const dayIndex = LONG_DAYS.indexOf(s.jour);
+        if (dayIndex < 0 || end <= first || start >= last || endLine <= startLine) return "";
+        const label = [s.association, s.usage].filter(Boolean).join(" - ");
+        return `
+          <div class="meetingBlock slot ${clubClass(s.association)}"
+               style="grid-column:${dayIndex + 2};grid-row:${startLine}/${endLine}">
+            <strong>${escapeHTML(label || "Scenario de travail")}</strong>
+            <span>${escapeHTML(s.debut)}-${escapeHTML(s.fin)}</span>
+          </div>`;
+      }).join("");
 
-const CLUBS = [
-  { name: "Basket" },
-  { name: "Handball" },
-  { name: "Handi-basket" },
-  { name: "Volley" },
-  { name: "Badminton" },
-  { name: "Futsal" },
-  { name: "Ecole multisports" },
-  { name: "Entretien / Ville" },
-  { name: "Libre / a arbitrer" }
-];
-
-const GYMS = [
-  {
-    name: "Fongravey",
-    capacity: "3 terrains possibles",
-    role: "Grande salle : besoins a 3 terrains, jeunes avec materiel adapte, creneaux handi-basket viables."
-  },
-  {
-    name: "Port du Roy",
-    capacity: "2 terrains maximum",
-    role: "Gymnase de match / competition pour basket et volley. Pas equivalent a Fongravey pour une demande a 3 terrains."
-  },
-  {
-    name: "Dupaty",
-    capacity: "Bloc complet possible",
-    role: "Salle utile pour blocs longs, badminton, volley, technique basket et futsal selon arbitrage."
-  }
-];
-
-const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
-const LONG_DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
-const LONG_GYMS = ["Fongravey", "Port du Roy", "Dupaty", "Lycee des metiers"];
-const BLANK_LONG_TIMES = ["17h00", "17h30", "18h00", "18h30", "19h00", "19h30", "20h00", "20h30", "21h00", "21h30", "22h00", "22h30", "23h00"];
-const PROPOSAL_LONG_TIMES = ["13h30", "14h00", "14h30", "15h00", "15h30", "16h00", "16h30", ...BLANK_LONG_TIMES];
-const LONG_PROPOSALS = [
-  { gymnase: "Dupaty", jour: "Lundi", debut: "17h30", fin: "19h30", association: "Badminton" },
-  { gymnase: "Dupaty", jour: "Lundi", debut: "20h00", fin: "22h30", association: "Badminton" },
-  { gymnase: "Dupaty", jour: "Mardi", debut: "17h30", fin: "19h30", association: "Basket" },
-  { gymnase: "Dupaty", jour: "Mardi", debut: "20h00", fin: "22h30", association: "Basket" },
-  { gymnase: "Dupaty", jour: "Mercredi", debut: "17h30", fin: "19h30", association: "Volley" },
-  { gymnase: "Dupaty", jour: "Mercredi", debut: "20h00", fin: "22h30", association: "Badminton" },
-  { gymnase: "Dupaty", jour: "Jeudi", debut: "17h30", fin: "19h30", association: "Volley" },
-  { gymnase: "Dupaty", jour: "Jeudi", debut: "20h00", fin: "22h30", association: "Volley" },
-  { gymnase: "Dupaty", jour: "Vendredi", debut: "17h30", fin: "19h30", association: "Volley" },
-  { gymnase: "Dupaty", jour: "Vendredi", debut: "20h00", fin: "22h30", association: "Basket" },
-  { gymnase: "Port du Roy", jour: "Lundi", debut: "17h00", fin: "20h30", association: "Handball" },
-  { gymnase: "Port du Roy", jour: "Lundi", debut: "20h30", fin: "23h00", association: "Handball" },
-  { gymnase: "Port du Roy", jour: "Mardi", debut: "17h00", fin: "20h30", association: "Volley" },
-  { gymnase: "Port du Roy", jour: "Mardi", debut: "20h30", fin: "23h00", association: "Volley" },
-  { gymnase: "Port du Roy", jour: "Mercredi", debut: "17h00", fin: "18h30", association: "Handball" },
-  { gymnase: "Port du Roy", jour: "Mercredi", debut: "18h30", fin: "23h00", association: "Basket" },
-  { gymnase: "Port du Roy", jour: "Jeudi", debut: "17h00", fin: "20h30", association: "Handball" },
-  { gymnase: "Port du Roy", jour: "Jeudi", debut: "20h30", fin: "23h00", association: "Handball" },
-  { gymnase: "Port du Roy", jour: "Vendredi", debut: "17h00", fin: "20h30", association: "Volley" },
-  { gymnase: "Port du Roy", jour: "Vendredi", debut: "20h30", fin: "23h00", association: "Volley" },
-  { gymnase: "Fongravey", jour: "Lundi", debut: "17h00", fin: "20h30", association: "Basket" },
-  { gymnase: "Fongravey", jour: "Lundi", debut: "20h30", fin: "23h00", association: "Volley" },
-  { gymnase: "Fongravey", jour: "Mardi", debut: "17h00", fin: "19h00", association: "Handball" },
-  { gymnase: "Fongravey", jour: "Mardi", debut: "19h00", fin: "21h00", association: "Handi-basket" },
-  { gymnase: "Fongravey", jour: "Mardi", debut: "21h00", fin: "23h00", association: "Handball" },
-  { gymnase: "Fongravey", jour: "Mercredi", debut: "13h30", fin: "15h00", association: "Badminton" },
-  { gymnase: "Fongravey", jour: "Mercredi", debut: "15h00", fin: "17h00", association: "Basket" },
-  { gymnase: "Fongravey", jour: "Mercredi", debut: "17h00", fin: "19h00", association: "Basket" },
-  { gymnase: "Fongravey", jour: "Mercredi", debut: "19h30", fin: "23h00", association: "Handball" },
-  { gymnase: "Fongravey", jour: "Jeudi", debut: "17h00", fin: "19h00", association: "Handball" },
-  { gymnase: "Fongravey", jour: "Jeudi", debut: "19h30", fin: "21h00", association: "Badminton" },
-  { gymnase: "Fongravey", jour: "Vendredi", debut: "17h00", fin: "18h30", association: "Handball" },
-  { gymnase: "Fongravey", jour: "Vendredi", debut: "19h00", fin: "20h30", association: "Handi-basket" },
-  { gymnase: "Fongravey", jour: "Vendredi", debut: "21h00", fin: "23h00", association: "Handball" },
-  { gymnase: "Lycee des metiers", jour: "Lundi", debut: "19h30", fin: "22h30", association: "Badminton" },
-  { gymnase: "Lycee des metiers", jour: "Mardi", debut: "19h30", fin: "22h30", association: "Badminton" },
-  { gymnase: "Lycee des metiers", jour: "Mercredi", debut: "13h30", fin: "16h30", association: "Badminton" },
-  { gymnase: "Lycee des metiers", jour: "Mercredi", debut: "19h30", fin: "22h30", association: "Badminton" },
-  { gymnase: "Lycee des metiers", jour: "Jeudi", debut: "19h30", fin: "22h30", association: "Futsal" },
-  { gymnase: "Lycee des metiers", jour: "Vendredi", debut: "19h30", fin: "22h30", association: "Badminton" }
-];
-
-let slots = [];
-let draftSlots = [];
-let conflicts = [];
-let proposals = [];
-let selected = [];
-let selectedDraft = [];
-let canEdit = false;
-
-function $(id) {
-  return document.getElementById(id);
+    return `
+      <section class="meetingGym">
+        <div class="meetingGymHead">
+          <h3>${escapeHTML(gym)}</h3>
+          ${subtitle ? `<span>${escapeHTML(subtitle)}</span>` : ""}
+        </div>
+        <div class="meetingGrid" style="--row-count:${rowCount}">
+          <div class="meetingCorner"></div>
+          ${LONG_DAYS.map(day => `<div class="meetingDay">${escapeHTML(day)}</div>`).join("")}
+          ${times.slice(0, -1).map(time => `
+            <div class="meetingTime">${escapeHTML(time)}</div>
+            ${LONG_DAYS.map(day => `<div class="meetingCell time-${timeLabelToCss(time)} day-${escapeHTML(day)}"></div>`).join("")}
+          `).join("")}
+          ${blocks}
+        </div>
+      </section>`;
+  }).join("");
 }
 
-function escapeHTML(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
+function renderLongDraftPlanning() {
+  renderLongPlanning("longDraftPlanning", [], {
+    empty: true,
+    times: BLANK_LONG_TIMES
+  });
+}
+
+function selectDraftSlot(id) {
+  if (selectedDraft.includes(id)) {
+    selectedDraft = selectedDraft.filter(x => x !== id);
+  } else {
+    selectedDraft = [id];
+  }
+  renderDraftPlanning();
+  renderLongDraftPlanning();
+}
+
+function openDraftEdit(id) {
+  if (!canEdit) {
+    toast("Active le mode edition d'abord.");
+    return;
+  }
+
+  const s = draftSlots.find(x => x[0] === id);
+  if (!s) return;
+
+  $("drawer").dataset.mode = "draft";
+  fillEditDrawer(s);
+  $("drawer").classList.add("show");
+}
+
+function addDraftSlot() {
+  if (!canEdit) {
+    toast("Active le mode edition d'abord.");
+    return;
+  }
+
+  const nextId = nextSlotId(draftSlots, "D");
+  const newSlot = [
+    nextId,
+    "Brouillon interface",
+    "Mercredi",
+    "Fongravey",
+    "17:30",
+    "19:00",
+    "Libre / a arbitrer",
+    "Nouveau creneau brouillon",
+    "A confirmer",
+    "Brouillon",
+    ""
+  ];
+
+  draftSlots.push(newSlot);
+  selectedDraft = [nextId];
+  renderDraftPlanning();
+  renderLongDraftPlanning();
+  openDraftEdit(nextId);
+}
+
+function clearDraft() {
+  if (!canEdit) {
+    toast("Active le mode edition d'abord.");
+    return;
+  }
+
+  const ok = confirm("Vider le planning vierge affiche a l'ecran ? Cela n'efface le Sheet que si tu cliques ensuite sur Enregistrer le brouillon.");
+  if (!ok) return;
+
+  draftSlots = [];
+  selectedDraft = [];
+  renderDraftPlanning();
+  renderLongDraftPlanning();
+  toast("Planning vierge vide a l'ecran");
+}
+
+function copyCurrentToDraft() {
+  draftSlots = JSON.parse(JSON.stringify(slots));
+  draftSlots = draftSlots.map((s, index) => {
+    const copy = [...s];
+    copy[0] = copy[0] || "D" + String(index + 1).padStart(3, "0");
+    copy[1] = "Copie base mairie vers brouillon";
+    copy[9] = copy[9] || "Brouillon";
+    return copy;
+  });
+  selectedDraft = [];
+  renderDraftPlanning();
+  renderLongDraftPlanning();
+  toast("Base actuelle copiee dans le planning vierge");
+}
+
+async function loadDraftFromSheet(showToast = true) {
+  try {
+    const data = await loadJSONP(CONFIG.API_URL + (CONFIG.API_URL.includes("?") ? "&" : "?") + "action=draft");
+    draftSlots = (data.brouillon || []).map(rowToArray);
+    selectedDraft = [];
+    renderDraftPlanning();
+    renderLongDraftPlanning();
+    if (showToast) toast("Brouillon recharge depuis le Sheet");
+  } catch (e) {
+    setDraftStatus("Brouillon non charge : " + e.message);
+    if (showToast) toast("Impossible de charger le brouillon");
+  }
+}
+
+async function saveDraftToSheet() {
+  if (!canEdit) {
+    toast("Active le mode edition d'abord.");
+    return;
+  }
+
+  const payload = { action: "replaceBrouillon", rows: draftSlots.map(arrayToRow) };
+
+  try {
+    await fetch(CONFIG.API_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+    toast("Brouillon envoye au Google Sheet");
+    setDraftStatus("Brouillon envoye. Clique sur Recharger brouillon dans quelques secondes pour verifier.", true);
+  } catch (e) {
+    setDraftStatus("Erreur d'enregistrement du brouillon : " + e.message);
+  }
+}
+
+function exportDraftCSV() {
+  const header = ["id", "source", "jour", "gymnase", "debut", "fin", "association", "usage", "nature", "statut", "note"];
+  const csv = [header, ...draftSlots]
+    .map(row => row.map(v => `"${String(v).replaceAll('"', '""')}"`).join(","))
+    .join("\n");
+  downloadTextFile("creneaux_blanquefort_brouillon.csv", csv, "text/csv;charset=utf-8");
+}
+
+function downloadTextFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
+document.addEventListener("DOMContentLoaded", reloadFromSheet);
