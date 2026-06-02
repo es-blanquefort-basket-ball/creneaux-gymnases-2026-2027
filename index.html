@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -14,7 +13,7 @@
         <img class="city-logo" src="logo_blanquefort_blanc.png" alt="Blanquefort" />
         <div>
           <h1>Coordination des creneaux sportifs</h1>
-          <p>Base mairie · atelier switch · doublons · propositions alternatives</p>
+          <p>Base mairie - coordination - document de reunion</p>
         </div>
       </div>
       <div class="header-actions">
@@ -30,15 +29,9 @@
       <div class="tabs">
         <button class="active" onclick="showTab('accueil', this)">Accueil</button>
         <button onclick="showTab('modifier', this)">Atelier switch</button>
-        <button onclick="showTab('vierge', this)">Planning vierge</button>
         <button onclick="showTab('viergeLong', this)">Planning vierge long</button>
-        <button onclick="showTab('table', this)">Tableau lignes</button>
-        <button onclick="showTab('doublons', this)">Doublons</button>
-        <button onclick="showTab('propositions', this)">Propositions</button>
         <button onclick="showTab('propositionsLongues', this)">Propositions longues</button>
         <button onclick="showTab('gymnases', this)">Gymnases</button>
-        <button onclick="showTab('conflits', this)">Conflits</button>
-        <button onclick="showTab('appli', this)">Saison prochaine</button>
       </div>
     </section>
 
@@ -47,7 +40,7 @@
         <div class="big">
           <div>
             <h2>Atelier creneaux</h2>
-            <p>Base mairie complete, tests de switch, ajout de creneaux, doublons visibles et propositions alternatives. Rien n'est valide tant que la reunion ne l'arbitre pas.</p>
+            <p>Base de travail partagee pour coordonner les creneaux sportifs. Les ajustements restent des scenarios de reunion tant qu'ils ne sont pas confirmes.</p>
           </div>
           <div class="legend">
             <span class="chip"><span class="dot basketDot"></span>Basket</span>
@@ -60,20 +53,20 @@
         </div>
         <div class="kpis">
           <div class="kpi"><b id="rowKpi">0</b><span>creneaux</span></div>
-          <div class="kpi"><b id="overlapKpi">0</b><span>doublons</span></div>
-          <div class="kpi"><b id="proposalKpi">0</b><span>propositions</span></div>
-          <div class="kpi"><b>3</b><span>gymnases</span></div>
+          <div class="kpi"><b>5</b><span>jours</span></div>
+          <div class="kpi"><b id="proposalKpi">0</b><span>scenarios</span></div>
+          <div class="kpi"><b>4</b><span>gymnases</span></div>
         </div>
       </div>
       <div id="syncStatus" class="notice">Chargement...</div>
     </section>
 
     <section class="card section" id="modifier">
-      <h2>Atelier switch / deplacement</h2>
-      <div class="notice">Selectionne un creneau pour le deplacer/modifier. Selectionne deux creneaux pour les switcher. Tu peux aussi ajouter un creneau manquant.</div>
+      <h2>Atelier planning</h2>
+      <div class="notice">Espace de travail pour ajuster les creneaux, tester un echange ou ajouter une ligne avant validation collective.</div>
       <div id="overlapBanner"></div>
       <div class="toolbar">
-        <button class="warn editOnly" onclick="swapSelected()">Switcher les 2 creneaux selectionnes</button>
+        <button class="warn editOnly" onclick="swapSelected()">Echanger les 2 creneaux selectionnes</button>
         <button class="editOnly" onclick="editSelected()">Deplacer / modifier</button>
         <button class="editOnly" onclick="addSlot()">Ajouter un creneau</button>
         <button class="secondary" onclick="clearSelection()">Annuler selection</button>
@@ -84,66 +77,21 @@
       <div class="scroll"><div class="grid" id="planningGrid"></div></div>
     </section>
 
-    <section class="card section" id="vierge">
-      <h2>Planning vierge / scenario de travail</h2>
-      <div class="notice">
-        Cet espace sert a construire un scenario a cote de la base mairie. Il peut etre vide, rempli a la main, exporte, ou enregistre dans l'onglet APP_BROUILLON du Google Sheet sans ecraser APP_CRENEAUX.
-      </div>
-
-      <div id="draftStatus" class="notice">Brouillon non charge.</div>
-
-      <div class="toolbar">
-        <button class="editOnly" onclick="addDraftSlot()">Ajouter un creneau au planning vierge</button>
-        <button class="editOnly" onclick="clearDraft()">Vider le planning vierge</button>
-        <button class="editOnly" onclick="saveDraftToSheet()">Enregistrer le brouillon dans le Sheet</button>
-        <button class="secondary" onclick="loadDraftFromSheet()">Recharger brouillon</button>
-        <button class="secondary" onclick="copyCurrentToDraft()">Copier la base actuelle en brouillon</button>
-        <button class="secondary" onclick="exportDraftCSV()">Exporter brouillon CSV</button>
-      </div>
-
-      <div class="scroll">
-        <div class="grid" id="draftPlanningGrid"></div>
-      </div>
-    </section>
-
     <section class="card section" id="viergeLong">
       <h2>Planning vierge long</h2>
       <div class="notice">Grille vierge de travail par gymnase, imprimable et utilisable en reunion.</div>
       <div id="longDraftPlanning"></div>
     </section>
 
-    <section class="card section" id="table">
-      <h2>Tableau lignes</h2>
-      <div class="toolbar">
-        <select id="clubFilter" onchange="renderTable()"></select>
-        <select id="gymFilter" onchange="renderTable()"></select>
-      </div>
-      <div class="scroll">
-        <table>
-          <thead><tr><th>Jour</th><th>Gymnase</th><th>Debut</th><th>Fin</th><th>Association</th><th>Groupe</th><th>Nature</th><th>Statut</th><th>Source</th><th>Note</th></tr></thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="card section" id="doublons"><h2>Doublons detectes</h2><div id="overlapList"></div></section>
-    <section class="card section" id="propositions"><h2>Propositions alternatives</h2><div class="rulegrid" id="proposalCards"></div></section>
     <section class="card section" id="propositionsLongues">
       <h2>Propositions longues</h2>
       <div class="notice">Scenarios de travail a verifier en reunion - non valides.</div>
       <div id="longProposalCards"></div>
     </section>
-    <section class="card section" id="gymnases"><h2>Gymnases</h2><div class="gymcards" id="gymCards"></div></section>
-    <section class="card section" id="conflits"><h2>Conflits / points d'attention</h2><div class="rulegrid" id="conflictCards"></div></section>
 
-    <section class="card section" id="appli">
-      <h2>Saison prochaine</h2>
-      <div class="notice">A presenter a la mairie : acces limite aux referents, planning valide, demandes de switch tracees, notification mairie automatique.</div>
-      <div class="rulegrid">
-        <div class="tile"><b>Acces limite</b>2 a 3 referents par association, pas tous les coachs.</div>
-        <div class="tile"><b>Switchs traces</b>Annulation, echange, creneau libere, week-end.</div>
-        <div class="tile"><b>Mairie informee</b>Notification mail automatique + historique.</div>
-      </div>
+    <section class="card section" id="gymnases">
+      <h2>Gymnases</h2>
+      <div class="gymcards" id="gymCards"></div>
     </section>
   </main>
 
