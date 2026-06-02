@@ -28,7 +28,7 @@ function loadJSONP(url) {
     const script = document.createElement("script");
     script.onerror = () => { delete window[callback]; script.remove(); reject(new Error("Impossible de charger l’API Apps Script")); };
     const separator = url.includes("?") ? "&" : "?";
-    script.src = url + separator + "action=data&callback=" + callback + "&t=" + Date.now();
+    script.src = url + separator + "callback=" + callback + "&t=" + Date.now();
     document.body.appendChild(script);
   });
 }
@@ -36,7 +36,7 @@ function loadJSONP(url) {
 async function reloadFromSheet() {
   setStatus("Chargement du Google Sheet…");
   try {
-    const data = await loadJSONP(CONFIG.API_URL);
+    const data = await loadJSONP(CONFIG.API_URL + (CONFIG.API_URL.includes("?") ? "&" : "?") + "action=data");
     slots = (data.creneaux || []).map(rowToArray);
     conflicts = (data.conflits || []).map(c => [c.id || "", c.point || "", c.situation || "", c.ce_qui_ne_va_pas || "", c.proposition || ""]);
     proposals = (data.propositions || []).map(p => [p.id || "", p.blocage || "", p.hypothese || "", p.proposition_1 || "", p.proposition_2 || "", p.niveau || ""]);
@@ -150,7 +150,7 @@ function renderOverlaps() {
   if (box) box.innerHTML = o.length ? o.map(p => `<div class="tile"><b>${p[0][2]} · ${p[0][3]}</b><p>${p[0][4]}-${p[0][5]} · ${p[0][6]} · ${p[0][7]}</p><p>${p[1][4]}-${p[1][5]} · ${p[1][6]} · ${p[1][7]}</p></div>`).join("") : '<div class="notice">Aucun doublon horaire détecté.</div>';
 }
 
-function renderAll() { renderFilters(); renderPlanning(); renderTable(); renderCards(); renderOverlaps(); }
+function renderAll() { renderFilters(); renderPlanning(); renderTable(); renderCards(); renderOverlaps(); renderDraftPlanning(); }
 
 function selectSlot(id) { if (selected.includes(id)) selected = selected.filter(x => x !== id); else { if (selected.length >= 2) selected.shift(); selected.push(id); } renderPlanning(); }
 function clearSelection() { selected = []; renderPlanning(); }

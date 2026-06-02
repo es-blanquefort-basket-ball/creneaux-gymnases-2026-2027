@@ -29,6 +29,7 @@
       <div class="tabs">
         <button class="active" onclick="showTab('accueil', this)">Accueil</button>
         <button onclick="showTab('modifier', this)">Atelier switch</button>
+        <button onclick="showTab('vierge', this)">Planning vierge</button>
         <button onclick="showTab('table', this)">Tableau lignes</button>
         <button onclick="showTab('doublons', this)">Doublons</button>
         <button onclick="showTab('propositions', this)">Propositions</button>
@@ -79,6 +80,28 @@
       </div>
       <div class="scroll"><div class="grid" id="planningGrid"></div></div>
     </section>
+
+    <section class="card section" id="vierge">
+      <h2>Planning vierge / scénario de travail</h2>
+      <div class="notice">
+        Cet espace sert à construire un scénario à côté de la base mairie. Il peut être vidé, rempli à la main, exporté, ou enregistré dans l’onglet APP_BROUILLON du Google Sheet sans écraser APP_CRENEAUX.
+      </div>
+
+      <div id="draftStatus" class="notice">Brouillon non chargé.</div>
+
+      <div class="toolbar">
+        <button class="editOnly" onclick="addDraftSlot()">Ajouter un créneau au planning vierge</button>
+        <button class="editOnly" onclick="clearDraft()">Vider le planning vierge</button>
+        <button class="editOnly" onclick="saveDraftToSheet()">Enregistrer le brouillon dans le Sheet</button>
+        <button class="secondary" onclick="loadDraftFromSheet()">Recharger brouillon</button>
+        <button class="secondary" onclick="copyCurrentToDraft()">Copier la base actuelle en brouillon</button>
+        <button class="secondary" onclick="exportDraftCSV()">Exporter brouillon CSV</button>
+      </div>
+
+      <div class="scroll">
+        <div class="grid" id="draftPlanningGrid"></div>
+      </div>
+
 
     <section class="card section" id="table">
       <h2>Tableau lignes</h2>
