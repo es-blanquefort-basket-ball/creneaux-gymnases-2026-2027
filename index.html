@@ -6,7 +6,6 @@
   <title>Blanquefort — Coordination des créneaux sportifs</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-
 <body class="locked">
   <header>
     <div class="header-inner">
@@ -14,7 +13,7 @@
         <img class="city-logo" src="logo_blanquefort_blanc.png" alt="Blanquefort" />
         <div>
           <h1>Coordination des créneaux sportifs</h1>
-          <p>Google Sheet relié · switchs · doublons · modifications tracées</p>
+          <p>Base mairie · atelier switch · doublons · propositions alternatives</p>
         </div>
       </div>
       <div class="header-actions">
@@ -32,6 +31,7 @@
         <button onclick="showTab('modifier', this)">Atelier switch</button>
         <button onclick="showTab('table', this)">Tableau lignes</button>
         <button onclick="showTab('doublons', this)">Doublons</button>
+        <button onclick="showTab('propositions', this)">Propositions</button>
         <button onclick="showTab('gymnases', this)">Gymnases</button>
         <button onclick="showTab('conflits', this)">Conflits</button>
         <button onclick="showTab('appli', this)">Saison prochaine</button>
@@ -42,13 +42,9 @@
       <div class="hero">
         <div class="big">
           <div>
-            <h2>Bienvenue</h2>
-            <p>
-              Cette application lit le Google Sheet, permet de déplacer ou switcher les créneaux,
-              puis renvoie le résultat vers l’onglet APP_CRENEAUX. Les doublons sont signalés automatiquement.
-            </p>
+            <h2>Atelier créneaux</h2>
+            <p>Base mairie complète, tests de switch, ajout de créneaux, doublons visibles et propositions alternatives. Rien n’est validé tant que la réunion ne l’arbitre pas.</p>
           </div>
-
           <div class="legend">
             <span class="chip"><span class="dot basketDot"></span>Basket</span>
             <span class="chip"><span class="dot handDot"></span>Handball</span>
@@ -58,39 +54,30 @@
             <span class="chip"><span class="dot futsalDot"></span>Futsal</span>
           </div>
         </div>
-
         <div class="kpis">
-          <div class="kpi"><b id="rowKpi">0</b><span>créneaux dans le Sheet</span></div>
-          <div class="kpi"><b id="overlapKpi">0</b><span>doublons détectés</span></div>
-          <div class="kpi"><b>2</b><span>terrains max Port du Roy</span></div>
-          <div class="kpi"><b>3</b><span>terrains possibles Fongravey</span></div>
+          <div class="kpi"><b id="rowKpi">0</b><span>créneaux</span></div>
+          <div class="kpi"><b id="overlapKpi">0</b><span>doublons</span></div>
+          <div class="kpi"><b id="proposalKpi">0</b><span>propositions</span></div>
+          <div class="kpi"><b>3</b><span>gymnases</span></div>
         </div>
       </div>
-
       <div id="syncStatus" class="notice">Chargement…</div>
     </section>
 
     <section class="card section" id="modifier">
       <h2>Atelier switch / déplacement</h2>
-      <div class="notice">
-        Sélectionne un créneau pour le déplacer/modifier. Sélectionne deux créneaux pour les switcher.
-        Chaque enregistrement met à jour le Google Sheet.
-      </div>
-
+      <div class="notice">Sélectionne un créneau pour le déplacer/modifier. Sélectionne deux créneaux pour les switcher. Tu peux aussi ajouter un créneau manquant.</div>
       <div id="overlapBanner"></div>
-
       <div class="toolbar">
         <button class="warn editOnly" onclick="swapSelected()">Switcher les 2 créneaux sélectionnés</button>
-        <button class="editOnly" onclick="editSelected()">Déplacer / modifier le créneau sélectionné</button>
+        <button class="editOnly" onclick="editSelected()">Déplacer / modifier</button>
+        <button class="editOnly" onclick="addSlot()">Ajouter un créneau</button>
         <button class="secondary" onclick="clearSelection()">Annuler sélection</button>
         <button class="secondary" onclick="reloadFromSheet()">Recharger Sheet</button>
         <button class="secondary" onclick="exportCSV()">Exporter CSV</button>
         <input class="search" id="q" oninput="renderAll()" placeholder="Filtrer : club, gymnase, jour…" />
       </div>
-
-      <div class="scroll">
-        <div class="grid" id="planningGrid"></div>
-      </div>
+      <div class="scroll"><div class="grid" id="planningGrid"></div></div>
     </section>
 
     <section class="card section" id="table">
@@ -99,49 +86,22 @@
         <select id="clubFilter" onchange="renderTable()"></select>
         <select id="gymFilter" onchange="renderTable()"></select>
       </div>
-
       <div class="scroll">
         <table>
-          <thead>
-            <tr>
-              <th>Jour</th>
-              <th>Gymnase</th>
-              <th>Début</th>
-              <th>Fin</th>
-              <th>Association</th>
-              <th>Groupe</th>
-              <th>Nature</th>
-              <th>Statut</th>
-              <th>Source</th>
-              <th>Note</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Jour</th><th>Gymnase</th><th>Début</th><th>Fin</th><th>Association</th><th>Groupe</th><th>Nature</th><th>Statut</th><th>Source</th><th>Note</th></tr></thead>
           <tbody id="tbody"></tbody>
         </table>
       </div>
     </section>
 
-    <section class="card section" id="doublons">
-      <h2>Doublons détectés</h2>
-      <div id="overlapList"></div>
-    </section>
-
-    <section class="card section" id="gymnases">
-      <h2>Gymnases</h2>
-      <div class="gymcards" id="gymCards"></div>
-    </section>
-
-    <section class="card section" id="conflits">
-      <h2>Conflits / points d’attention</h2>
-      <div class="rulegrid" id="conflictCards"></div>
-    </section>
+    <section class="card section" id="doublons"><h2>Doublons détectés</h2><div id="overlapList"></div></section>
+    <section class="card section" id="propositions"><h2>Propositions alternatives</h2><div class="rulegrid" id="proposalCards"></div></section>
+    <section class="card section" id="gymnases"><h2>Gymnases</h2><div class="gymcards" id="gymCards"></div></section>
+    <section class="card section" id="conflits"><h2>Conflits / points d’attention</h2><div class="rulegrid" id="conflictCards"></div></section>
 
     <section class="card section" id="appli">
       <h2>Saison prochaine</h2>
-      <div class="notice">
-        Piste à montrer à la mairie : accès limité à quelques référents, planning validé,
-        demandes de switch tracées, notification mairie automatique.
-      </div>
+      <div class="notice">À présenter à la mairie : accès limité aux référents, planning validé, demandes de switch tracées, notification mairie automatique.</div>
       <div class="rulegrid">
         <div class="tile"><b>Accès limité</b>2 à 3 référents par association, pas tous les coachs.</div>
         <div class="tile"><b>Switchs tracés</b>Annulation, échange, créneau libéré, week-end.</div>
@@ -154,67 +114,21 @@
     <h2>Déplacer / modifier</h2>
     <div class="formgrid">
       <input type="hidden" id="editId" />
-
-      <div>
-        <label>Jour</label>
-        <select id="editJour">
-          <option>Lundi</option>
-          <option>Mardi</option>
-          <option>Mercredi</option>
-          <option>Jeudi</option>
-          <option>Vendredi</option>
-          <option>Samedi</option>
-          <option>Dimanche</option>
-        </select>
-      </div>
-
-      <div>
-        <label>Gymnase</label>
-        <select id="editGym"></select>
-      </div>
-
-      <div>
-        <label>Début</label>
-        <input id="editDebut" />
-      </div>
-
-      <div>
-        <label>Fin</label>
-        <input id="editFin" />
-      </div>
-
-      <div>
-        <label>Association</label>
-        <select id="editClub"></select>
-      </div>
-
-      <div>
-        <label>Nature</label>
-        <input id="editNature" />
-      </div>
-
-      <div>
-        <label>Statut</label>
-        <input id="editStatut" />
-      </div>
-
-      <div>
-        <label>Source</label>
-        <input id="editSource" />
-      </div>
-
+      <div><label>Jour</label><select id="editJour"><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option><option>Dimanche</option></select></div>
+      <div><label>Gymnase</label><select id="editGym"></select></div>
+      <div><label>Début</label><input id="editDebut" /></div>
+      <div><label>Fin</label><input id="editFin" /></div>
+      <div><label>Association</label><select id="editClub"></select></div>
+      <div><label>Nature</label><input id="editNature" /></div>
+      <div><label>Statut</label><input id="editStatut" /></div>
+      <div><label>Source</label><input id="editSource" /></div>
       <textarea id="editGroupe" placeholder="Groupe / usage"></textarea>
       <textarea id="editNote" placeholder="Note"></textarea>
     </div>
-
-    <div class="toolbar">
-      <button onclick="saveEdit()">Enregistrer dans le Sheet</button>
-      <button class="secondary" onclick="closeDrawer()">Fermer</button>
-    </div>
+    <div class="toolbar"><button onclick="saveEdit()">Enregistrer dans le Sheet</button><button class="secondary" onclick="closeDrawer()">Fermer</button></div>
   </div>
 
   <div class="toast" id="toast"></div>
-
   <script src="app.js"></script>
 </body>
 </html>

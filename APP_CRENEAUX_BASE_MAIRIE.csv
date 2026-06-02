@@ -1,0 +1,64 @@
+id,source,jour,gymnase,debut,fin,association,usage,nature,statut,note
+S001,Mairie DUPATY AO7:AX8,Lundi,Dupaty,17:45,20:15,Badminton,Créneau club,Besoin important,Source mairie,BADMINTON 2026/2027
+S002,Mairie DUPATY AY7:BH8,Lundi,Dupaty,20:15,22:45,Badminton,Créneau club,Besoin important,Source mairie,BADMINTON 2026/2027
+S003,Mairie DUPATY AQ9:AX10,Mardi,Dupaty,18:15,20:15,Volley,Créneau club,Besoin important,Source mairie,VOLLEY 2026/2027
+S004,Mairie DUPATY AY9:BH10,Mardi,Dupaty,20:15,22:45,Volley,Créneau club,Besoin important,Source mairie,VOLLEY 2026/2027
+S005,Mairie DUPATY AQ11:BB11,Mardi,Dupaty,18:15,21:15,Basket,EN +,Besoin important,Source mairie EN+,BASKET 2026/2027 EN +
+S006,Mairie DUPATY AO12:AW13,Mercredi,Dupaty,17:45,20:00,Volley,Créneau club,Besoin important,Source mairie,VOLLEY 2026/2027
+S007,Mairie DUPATY AX12:BH13,Mercredi,Dupaty,20:00,22:45,Badminton,Créneau club,Besoin important,Source mairie,BADMINTON 2026/2027
+S008,Mairie DUPATY AQ14:AX15,Jeudi,Dupaty,18:15,20:15,Volley,Créneau club,Besoin important,Source mairie,VOLLEY 2026/2027
+S009,Mairie DUPATY AY14:BH15,Jeudi,Dupaty,20:15,22:45,Volley,Créneau club,Besoin important,Source mairie,VOLLEY 2026/2027
+S010,Mairie DUPATY AQ16:BB16,Jeudi,Dupaty,18:15,21:15,Basket,EN +,Besoin important,Source mairie EN+,BASKET 2026/2027 EN +
+S011,Mairie DUPATY AQ17:AX18,Vendredi,Dupaty,18:15,20:15,Volley,Créneau club,Besoin important,Source mairie,VOLLEY 2026/2027
+S012,Mairie DUPATY AY17:BH18,Vendredi,Dupaty,20:15,22:45,Volley,Créneau club,Besoin important,Source mairie,VOLLEY 2026/2027
+S013,Mairie DUPATY AQ19:BJ19,Vendredi,Dupaty,18:15,23:00,Basket,EN +,Besoin important,Source mairie EN+,BASKET 2026/2027 EN +
+S014,Mairie PDR C7:J8,Lundi,Port du Roy,08:15,10:15,Entretien / Ville,SREM DE 6h30 à 10h,Occupation technique,Source mairie,SREM DE 6h30 à 10h
+S015,Mairie PDR AR7:AV8,Lundi,Port du Roy,18:30,19:45,Handball,U13 F,Besoin important,Source mairie,HAND U13 F 2026/2027
+S016,Mairie PDR AW7:BB8,Lundi,Port du Roy,19:45,21:15,Handball,U18 F,Besoin compétition,Source mairie,HAND U18 F 2026/2027
+S017,Mairie PDR BC7:BJ8,Lundi,Port du Roy,21:15,23:00,Basket,SENIORS,Besoin compétition,Source mairie,BASKET SENIORS 2025/2026
+S018,Mairie PDR BC9:BJ9,Lundi,Port du Roy,21:15,23:00,Handball,SG2 EN +,Besoin compétition,Source mairie EN+,HAND SG2 2026/2027 EN +
+S019,Mairie PDR AQ10:AV11,Mardi,Port du Roy,18:15,19:45,Handball,U15F,Besoin important,Source mairie,HAND U15F 2026/2027
+S020,Mairie PDR AW10:BB11,Mardi,Port du Roy,19:45,21:15,Handball,U18G,Besoin compétition,Source mairie,HAND U18G 2026/2027
+S021,Mairie PDR BC10:BJ11,Mardi,Port du Roy,21:15,23:00,Handball,SG1,Besoin compétition,Source mairie,HAND SG1 2026/2027
+S022,Mairie PDR T12:W13,Mercredi,Port du Roy,12:30,13:30,Handball,U9 MIXTE,Socle prioritaire,Source mairie,HAND U9 MIXTE 2026/2027
+S023,Mairie PDR X12:AB13,Mercredi,Port du Roy,13:30,14:45,Handball,U11F,Socle prioritaire,Source mairie,HAND U11F 2026/2027
+S024,Mairie PDR AC12:AG13,Mercredi,Port du Roy,14:45,16:00,Handball,U11G,Socle prioritaire,Source mairie,HAND U11G 2026/2027
+S025,Mairie PDR AH12:AL13,Mercredi,Port du Roy,16:00,17:15,Handball,U13F,Besoin important,Source mairie,HAND U13F 2026/2027
+S026,Mairie PDR AM12:AR13,Mercredi,Port du Roy,17:15,18:45,Handball,U13G,Besoin important,Source mairie,HAND U13G 2026/2027
+S027,Mairie PDR AS12:AV13,Mercredi,Port du Roy,18:45,19:45,Handball,U15F,Besoin important,Source mairie,HAND U15F 2026/2027
+S028,Mairie PDR AW12:BJ13,Mercredi,Port du Roy,19:45,23:00,Basket,U18 et Séniors en + de 19h30 à 21h,Besoin compétition,Source mairie EN+,BASKET U18 et Séniors 2026/2027 en + de 19h30 à 21h
+S029,Mairie PDR AK14:AQ15,Jeudi,Port du Roy,16:45,18:30,Handball,U11F,Socle prioritaire,Source mairie,HAND U11F 2026/2027
+S030,Mairie PDR AR14:AV15,Jeudi,Port du Roy,18:30,19:45,Handball,U15G,Besoin important,Source mairie,HAND U15G 2026/2027
+S031,Mairie PDR AW14:BB15,Jeudi,Port du Roy,19:45,21:15,Handball,SF2,Besoin compétition,Source mairie,HAND SF2 2026/2027
+S032,Mairie PDR BC14:BH15,Jeudi,Port du Roy,21:15,22:45,Handball,SG1,Besoin compétition,Source mairie,HAND SG1 2026/2027
+S033,Mairie PDR AM16:AZ17,Vendredi,Port du Roy,17:15,20:45,Volley,Créneau club,Besoin important,Source mairie,VOLLEY 2026/2027
+S034,Mairie PDR AQ18:AV18,Vendredi,Port du Roy,18:15,19:45,Handball,U15F EN +,Besoin important,Source mairie EN+,HAND U15F 2026/2027 EN +
+S035,Mairie PDR AW18:BB18,Vendredi,Port du Roy,19:45,21:15,Handball,U18 G EN +,Besoin compétition,Source mairie EN+,HAND U18 G 2026/2027 EN +
+S036,Mairie PDR BC18:BH18,Vendredi,Port du Roy,21:15,22:45,Handball,LOISIRS EN +,Besoin compétition,Source mairie EN+,HAND LOISIRS 2026/2027 EN +
+S037,Mairie PDR BC19:BH19,Vendredi,Port du Roy,21:15,22:45,Basket,SENIORS en +,Besoin compétition,Source mairie EN+,BASKET SENIORS 2026/2027 en +
+S038,Mairie PDR O20:R21,Samedi,Port du Roy,11:15,12:15,Handball,BABY  EN +,Socle prioritaire,Source mairie EN+,BABY HAND 2026/2027 EN +
+S039,Mairie PDR AI22:AX22,Dimanche,Port du Roy,16:15,20:15,Futsal,Créneau club,Besoin important,Source mairie,FUTSAL 2026/2027
+S040,Mairie COMPLEXE C7:J8,Lundi,Fongravey,08:15,10:15,Entretien / Ville,ENTRETIEN DE 6H30 A 10H,Occupation technique,Source mairie,ENTRETIEN DE 6H30 A 10H
+S041,Mairie COMPLEXE AO7:AZ8,Lundi,Fongravey,17:45,20:45,Basket,U9-U11-U13-U15-U17,Socle prioritaire,Source mairie,BASKET U9-U11-U13-U15-U17 2026/2027
+S042,Mairie COMPLEXE BA7:BJ8,Lundi,Fongravey,20:45,23:00,Volley,Créneau club,Besoin important,Source mairie,VOLLEY 2026/2027
+S043,Mairie COMPLEXE AO9:AT11,Mardi,Fongravey,17:45,19:15,Handball,U13G,Besoin important,Source mairie,HAND U13G 2026/2027
+S044,Mairie COMPLEXE AU9:BB10,Mardi,Fongravey,19:15,21:15,Handi-basket,Créneau club,Socle prioritaire,Source mairie,HANDISPORT 2026/2027
+S045,Mairie COMPLEXE BC9:BH10,Mardi,Fongravey,21:15,22:45,Handball,SG1,Besoin compétition,Source mairie,HANDBALL SG1 2026/2027
+S046,Mairie COMPLEXE AU11:AV11,Mardi,Fongravey,19:15,19:45,Handball,U13G EN +,Besoin important,Source mairie EN+,HAND U13G 2026/2027 EN +
+S047,Mairie COMPLEXE AW11:BB11,Mardi,Fongravey,19:45,21:15,Handball,U18G EN +,Besoin compétition,Source mairie EN+,HAND U18G 2026/2027 EN +
+S048,Mairie COMPLEXE BC11:BJ11,Mardi,Fongravey,21:15,23:00,Volley,en +,Besoin important,Source mairie EN+,VOLLEY 2026/2027 en +
+S049,Mairie COMPLEXE Y12:AD13,Mercredi,Fongravey,13:45,15:15,Badminton,Créneau club,Besoin important,Source mairie,BADMINTON 2026/2027
+S050,Mairie COMPLEXE AE12:AU13,Mercredi,Fongravey,15:15,19:30,Basket,U9-U11-U13-U15-U17,Socle prioritaire,Source mairie,BASKET U9-U11-U13-U15-U17 2026/2027
+S051,Mairie COMPLEXE AR14:AV14,Mercredi,Fongravey,18:30,19:45,Handball,U18F EN +,Besoin compétition,Source mairie EN+,HAND U18F 2026/2027 EN +
+S052,Mairie COMPLEXE AW14:BB14,Mercredi,Fongravey,19:45,21:15,Handball,U18G EN +,Besoin compétition,Source mairie EN+,HAND U18G 2026/2027 EN +
+S053,Mairie COMPLEXE BC14:BH14,Mercredi,Fongravey,21:15,22:45,Handball,SG2 EN +,Besoin compétition,Source mairie EN+,HAND SG2 2026/2027 EN +
+S054,Mairie COMPLEXE AO15:BJ16,Jeudi,Fongravey,17:45,23:00,Badminton,Créneau club,Besoin important,Source mairie,BADMINTON 2026/2027
+S055,Mairie COMPLEXE AK17:AS17,Jeudi,Fongravey,16:45,19:00,Handball,U11G EN +,Socle prioritaire,Source mairie EN+,HAND U11G 2026/2027 EN +
+S056,Mairie COMPLEXE AU17:BB17,Jeudi,Fongravey,19:15,21:15,Handi-basket,à la place du vendredi,Socle prioritaire,Source mairie,HANDISPORT 2026/2027 à la place du vendredi
+S057,Mairie COMPLEXE BC17:BJ17,Jeudi,Fongravey,21:15,23:00,Volley,en +,Besoin important,Source mairie EN+,VOLLEY 2026/2027 en +
+S058,Mairie COMPLEXE AQ18:AV18,Vendredi,Fongravey,18:15,19:45,Handball,U15G,Besoin important,Source mairie,HAND U15G 2026/2027
+S059,Mairie COMPLEXE AW18:BB18,Vendredi,Fongravey,19:45,21:15,Handball,SG1,Besoin compétition,Source mairie,HAND SG1 2026/2027
+S060,Mairie COMPLEXE BC18:BJ18,Vendredi,Fongravey,21:15,23:00,Handi-basket,garde ce créneau si pas possible le jeudi,Socle prioritaire,Source mairie,HANDISPORT 2026/2027 garde ce créneau si pas possible le jeudi
+S061,Mairie COMPLEXE I19:T19,Samedi,Fongravey,09:45,12:45,École multisports,ECOLE MULTISPORTS,Socle prioritaire,Source mairie,ECOLE MULTISPORTS 2026/2027
+S062,Ajout travail,Mercredi,Fongravey,09:00,11:00,Basket,Baby / école de basket — option samedi matin à garder en tête,Socle prioritaire,À programmer,Piste samedi matin à ne pas oublier.
+S063,Ajout travail,Vendredi,Dupaty,20:30,22:30,Futsal,Créneau adulte hors compétition,Ajustable,Option,À placer sans bloquer des compétitions.

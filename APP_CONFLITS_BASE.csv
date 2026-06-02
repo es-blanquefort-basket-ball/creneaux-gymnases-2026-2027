@@ -1,0 +1,17 @@
+id,point,situation,ce_qui_ne_va_pas,proposition
+P001,Port du Roy,Capacité réelle,"Port du Roy = 2 terrains maximum, donc pas équivalent à Fongravey pour une demande à 3 terrains.",À intégrer dans tous les scénarios.
+P002,Handball / Handi-basket,Ne pas confondre,Handball classique et Handi-basket sont distincts.,"Deux couleurs, deux lignes, deux arbitrages."
+P003,Badminton,Créneau 17h30,Le badminton doit avoir un créneau à 17h30.,À protéger dans les arbitrages.
+P004,Futsal,Hors compétition,"Le futsal doit être placé sur un créneau compatible, sans bloquer des compétitions.",Option Dupaty / créneau hors match.
+P005,Doublon Mardi Dupaty,Chevauchement détecté,18:15-20:15 Volley (Créneau club) chevauche 18:15-21:15 Basket (EN +).,À arbitrer en atelier switch.
+P006,Doublon Mardi Dupaty,Chevauchement détecté,20:15-22:45 Volley (Créneau club) chevauche 18:15-21:15 Basket (EN +).,À arbitrer en atelier switch.
+P007,Doublon Jeudi Dupaty,Chevauchement détecté,18:15-20:15 Volley (Créneau club) chevauche 18:15-21:15 Basket (EN +).,À arbitrer en atelier switch.
+P008,Doublon Jeudi Dupaty,Chevauchement détecté,20:15-22:45 Volley (Créneau club) chevauche 18:15-21:15 Basket (EN +).,À arbitrer en atelier switch.
+P009,Doublon Vendredi Dupaty,Chevauchement détecté,18:15-20:15 Volley (Créneau club) chevauche 18:15-23:00 Basket (EN +).,À arbitrer en atelier switch.
+P010,Doublon Vendredi Dupaty,Chevauchement détecté,20:15-22:45 Volley (Créneau club) chevauche 18:15-23:00 Basket (EN +).,À arbitrer en atelier switch.
+P011,Doublon Vendredi Dupaty,Chevauchement détecté,20:15-22:45 Volley (Créneau club) chevauche 20:30-22:30 Futsal (Créneau adulte hors compétition).,À arbitrer en atelier switch.
+P012,Doublon Vendredi Dupaty,Chevauchement détecté,18:15-23:00 Basket (EN +) chevauche 20:30-22:30 Futsal (Créneau adulte hors compétition).,À arbitrer en atelier switch.
+P013,Doublon Lundi Port du Roy,Chevauchement détecté,21:15-23:00 Basket (SENIORS) chevauche 21:15-23:00 Handball (SG2 EN +).,À arbitrer en atelier switch.
+P014,Doublon Vendredi Port du Roy,Chevauchement détecté,17:15-20:45 Volley (Créneau club) chevauche 18:15-19:45 Handball (U15F EN +).,À arbitrer en atelier switch.
+P015,Doublon Vendredi Port du Roy,Chevauchement détecté,17:15-20:45 Volley (Créneau club) chevauche 19:45-21:15 Handball (U18 G EN +).,À arbitrer en atelier switch.
+P016,Doublon Vendredi Port du Roy,Chevauchement détecté,21:15-22:45 Handball (LOISIRS EN +) chevauche 21:15-22:45 Basket (SENIORS en +).,À arbitrer en atelier switch.
