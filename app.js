@@ -3,18 +3,38 @@ const CONFIG = {
   EDIT_CODE: "2026"
 };
 
+const LOCAL_SLOT_META_KEY = "blanquefortSlotMetaV13";
+const LOCAL_CLUB_PROPOSALS_KEY = "blanquefortClubProposalsV13";
+const LOCAL_WORKING_SLOTS_KEY = "blanquefortWorkingSlotsV14";
+const LOCAL_BLANK_SLOTS_KEY = "blanquefortBlankSlotsV14";
+const LOCAL_SCENARIOS_KEY = "blanquefortScenariosV14";
+const LOCAL_SCENARIO_META_KEY = "blanquefortScenarioMetaV14";
 const CLUBS = ["Basket", "Handball", "Handi-basket", "Volley", "Badminton", "Futsal", "Ecole multisports", "Entretien / Ville", "Libre / a arbitrer"];
 const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const LONG_DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
-const LONG_GYMS = ["Fongravey", "Port du Roy", "Dupaty", "Lycee des metiers"];
+const LONG_GYMS = ["Fongravey", "Port du Roy", "Dupaty", "Lycee des metiers", "Lycée agricole"];
 const BLANK_LONG_TIMES = ["17h00", "17h30", "18h00", "18h30", "19h00", "19h30", "20h00", "20h30", "21h00", "21h30", "22h00", "22h30", "23h00"];
-const PROPOSAL_LONG_TIMES = ["13h30", "14h00", "14h30", "15h00", "15h30", "16h00", "16h30", ...BLANK_LONG_TIMES];
+const PROPOSAL_LONG_TIMES = BLANK_LONG_TIMES;
+const REQUEST_STATUS = {
+  existant_a_conserver: "Existant a conserver",
+  demande_en_plus: "Demande en plus",
+  a_liberer: "A liberer",
+  a_deplacer: "A deplacer / echanger",
+  a_preciser: "A preciser"
+};
+const PRIORITY_LABELS = {
+  vital: "Vital",
+  important: "Important",
+  confort: "Confort",
+  negociable: "Negociable"
+};
 
 const GYMS = [
   ["Fongravey", "3 terrains possibles", "Grande salle pour les besoins a plusieurs terrains et les creneaux adaptes."],
   ["Port du Roy", "2 terrains maximum", "Gymnase utilise pour les entrainements et rencontres selon les besoins de coordination."],
   ["Dupaty", "Bloc complet possible", "Salle utile pour les blocs longs et les usages sportifs coordonnes."],
-  ["Lycee des metiers", "Salle annexe", "Salle utilisee dans les scenarios de travail pour completer la coordination."]
+  ["Lycee des metiers", "Salle annexe", "Salle utilisee dans les scenarios de travail pour completer la coordination."],
+  ["Lycée agricole", "Equipement complementaire", "Equipement ajoute aux plannings de travail et scenarios."]
 ].map(([name, capacity, role]) => ({ name, capacity, role }));
 
 const LONG_PROPOSALS_TEXT = `
@@ -66,16 +86,106 @@ const LONG_PROPOSALS = LONG_PROPOSALS_TEXT.trim().split("\n").map(line => {
 });
 
 let slots = [];
+let workingSlots = [];
+let blankSlots = loadLocalObject(LOCAL_BLANK_SLOTS_KEY, []);
+let scenarios = loadLocalObject(LOCAL_SCENARIOS_KEY, {});
+let scenarioMeta = loadLocalObject(LOCAL_SCENARIO_META_KEY, {});
+let activeScenario = "";
+let editContext = { type: "work", id: "" };
 let proposals = [];
 let selected = [];
 let canEdit = false;
+let slotMeta = loadLocalObject(LOCAL_SLOT_META_KEY, {});
+let clubProposals = loadLocalObject(LOCAL_CLUB_PROPOSALS_KEY, []);
 
 function $(id) {
   return document.getElementById(id);
 }
 
+function loadLocalObject(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function saveLocalObject(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    toast("Stockage local indisponible");
+  }
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function ensureScenarioMeta(id = activeScenario) {
+  const key = String(id || "1");
+  if (!scenarioMeta[key]) {
+    scenarioMeta[key] = {
+      name: "",
+      author: "",
+      date: todayISO(),
+      goal: "",
+      comment: "",
+      status: "brouillon"
+    };
+  }
+  return scenarioMeta[key];
+}
+
+function scenarioIds() {
+  return Object.keys(scenarios).sort((a, b) => {
+    const da = ensureScenarioMeta(a).date || "";
+    const db = ensureScenarioMeta(b).date || "";
+    return da.localeCompare(db) || a.localeCompare(b);
+  });
+}
+
+function ensureScenarioList() {
+  if (!scenarioIds().length) {
+    const id = newScenarioId();
+    scenarios[id] = [];
+    scenarioMeta[id] = { name: "Nouveau scenario", author: "", date: todayISO(), goal: "", comment: "", status: "brouillon" };
+    activeScenario = id;
+    saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
+    saveLocalObject(LOCAL_SCENARIO_META_KEY, scenarioMeta);
+  }
+  if (!scenarios[activeScenario]) activeScenario = scenarioIds()[0];
+}
+
+function newScenarioId() {
+  return "scenario-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+}
+
 function escapeHTML(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+}
+
+function normalizeText(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function normalizeEquipment(value) {
+  const raw = String(value || "").trim();
+  const key = normalizeText(raw);
+  if (!key) return "";
+  if (key.includes("agricole")) return "Lycée agricole";
+  if (key.includes("fongravey")) return "Fongravey";
+  if (key.includes("port") && key.includes("roy")) return "Port du Roy";
+  if (key.includes("dupaty")) return "Dupaty";
+  if (key.includes("lycee") && key.includes("metier")) return "Lycee des metiers";
+  return raw;
+}
+
+function equipmentListFor(rows = []) {
+  const base = GYMS.map(g => g.name);
+  const extras = rows.map(s => normalizeEquipment(s[3])).filter(Boolean).filter(name => !base.includes(name));
+  return [...base, ...Array.from(new Set(extras))];
 }
 
 function loadJSONP(url) {
@@ -102,6 +212,7 @@ async function reloadFromSheet() {
   try {
     const data = await loadJSONP(CONFIG.API_URL + (CONFIG.API_URL.includes("?") ? "&" : "?") + "action=data");
     slots = (data.creneaux || []).map(rowToArray);
+    workingSlots = initWorkingSlots(slots);
     proposals = data.propositions || [];
     selected = [];
     renderAll();
@@ -113,11 +224,52 @@ async function reloadFromSheet() {
 }
 
 function rowToArray(r) {
-  return [r.id, r.source, r.jour, r.gymnase, r.debut, r.fin, r.association, r.usage, r.nature, r.statut, r.note].map(v => String(v || ""));
+  const row = [r.id, r.source, r.jour, r.gymnase, r.debut, r.fin, r.association, r.usage, r.nature, r.statut, r.note].map(v => String(v || ""));
+  row[3] = normalizeEquipment(row[3]);
+  return row;
+}
+
+function copySlot(s) {
+  return [...s].map(v => String(v || ""));
+}
+
+function normalizeTimeForWork(value) {
+  const parsed = parseTime(value);
+  if (!parsed) return String(value || "");
+  if (parsed.minute === 15 || parsed.minute === 45) {
+    const total = parsed.hour * 60 + parsed.minute - 15;
+    return formatTime(Math.floor(total / 60), total % 60);
+  }
+  return formatTime(parsed.hour, parsed.minute);
+}
+
+function normalizeSlotForWork(s) {
+  const copy = copySlot(s);
+  copy[3] = normalizeEquipment(copy[3]);
+  copy[4] = normalizeTimeForWork(copy[4]);
+  copy[5] = normalizeTimeForWork(copy[5]);
+  return copy;
+}
+
+function initWorkingSlots(baseSlots) {
+  const normalized = baseSlots.map(normalizeSlotForWork);
+  saveLocalObject(LOCAL_WORKING_SLOTS_KEY, normalized);
+  return normalized;
 }
 
 function arrayToRow(s) {
   return { id: s[0] || "", source: s[1] || "", jour: s[2] || "", gymnase: s[3] || "", debut: s[4] || "", fin: s[5] || "", association: s[6] || "", usage: s[7] || "", nature: s[8] || "", statut: s[9] || "", note: s[10] || "" };
+}
+
+function arrayToDemandRow(s) {
+  return {
+    ...arrayToRow(s),
+    statut_demande: requestStatus(s),
+    statut_demande_libelle: requestStatusLabel(s),
+    priorite: priorityValue(s),
+    priorite_libelle: priorityLabel(s),
+    remplace_creneau: replaceSlotText(s)
+  };
 }
 
 function setStatus(message, ok = false) {
@@ -153,11 +305,132 @@ function showTab(id, btn) {
   if (btn) btn.classList.add("active");
   if (id === "viergeLong") renderLongDraftPlanning();
   if (id === "propositionsLongues") renderLongProposals();
+  if (id === "parClub") renderClubView();
+  if (id === "propositionsClub") renderCurrentBaseView();
 }
 
 function minutes(t) {
   const [h, m] = String(t || "00:00").replace("h", ":").split(":").map(Number);
   return (h || 0) * 60 + (m || 0);
+}
+
+function parseTime(value) {
+  const text = String(value || "").trim();
+  const match = text.match(/^(\d{1,2})\s*[h:]\s*(\d{2})$/i);
+  if (!match) return null;
+  return { hour: Number(match[1]), minute: Number(match[2]) };
+}
+
+function formatTime(hour, minute) {
+  return String(hour).padStart(2, "0") + "h" + String(minute).padStart(2, "0");
+}
+
+function suggestTime(value) {
+  return normalizeTimeForWork(value);
+}
+
+function mairieRange(s) {
+  return `${s[4] || ""}-${s[5] || ""}`;
+}
+
+function suggestedRange(s) {
+  return `${suggestTime(s[4])}-${suggestTime(s[5])}`;
+}
+
+function splitRange(value) {
+  const [start, end] = String(value || "").split("-").map(v => v.trim());
+  return { start: start || "", end: end || "" };
+}
+
+function hasQuarterHourToVerify(s) {
+  const start = parseTime(s[4]);
+  const end = parseTime(s[5]);
+  return [start?.minute, end?.minute].some(m => m === 15 || m === 45);
+}
+
+function getSlotMeta(id) {
+  return slotMeta[id] || {};
+}
+
+function inferPriority(s) {
+  const key = normalizeText([s[8], s[9], s[10]].join(" "));
+  if (key.includes("socle prioritaire") || key.includes("besoin prioritaire")) return "vital";
+  if (key.includes("besoin important")) return "important";
+  if (key.includes("confort")) return "confort";
+  return "";
+}
+
+function requestStatus(s) {
+  const meta = getSlotMeta(s[0]);
+  if (meta.requestStatus || meta.statut_demande) return meta.requestStatus || meta.statut_demande;
+  if (!originalMairieSlot(s[0])) return "demande_en_plus";
+  return "existant_a_conserver";
+}
+
+function requestStatusLabel(s) {
+  return REQUEST_STATUS[requestStatus(s)] || REQUEST_STATUS.a_preciser;
+}
+
+function requestStatusClass(s) {
+  return "request-" + requestStatus(s).replaceAll("_", "-");
+}
+
+function priorityValue(s) {
+  return getSlotMeta(s[0]).priority || inferPriority(s);
+}
+
+function priorityLabel(s) {
+  const value = priorityValue(s);
+  return value ? (PRIORITY_LABELS[value] || value) : "A preciser";
+}
+
+function replaceSlotText(s) {
+  return getSlotMeta(s[0]).replaceSlot || "";
+}
+
+function getTimeStatus(s) {
+  const meta = getSlotMeta(s[0]);
+  return meta.timeStatus || "à vérifier";
+}
+
+function confirmedStart(s) {
+  const meta = getSlotMeta(s[0]);
+  return meta.confirmedStart || splitRange(meta.confirmedTime).start || "";
+}
+
+function confirmedEnd(s) {
+  const meta = getSlotMeta(s[0]);
+  return meta.confirmedEnd || splitRange(meta.confirmedTime).end || "";
+}
+
+function hasConfirmedRange(s) {
+  return !!(confirmedStart(s) && confirmedEnd(s));
+}
+
+function effectiveStart(s) {
+  return confirmedStart(s) || s[4] || "";
+}
+
+function effectiveEnd(s) {
+  return confirmedEnd(s) || s[5] || "";
+}
+
+function effectiveRange(s) {
+  return `${effectiveStart(s)}-${effectiveEnd(s)}`;
+}
+
+function isCorrectedSlot(s) {
+  return hasConfirmedRange(s) && (getTimeStatus(s) === "corrigé" || effectiveStart(s) !== s[4] || effectiveEnd(s) !== s[5]);
+}
+
+function needsTimeReview(s) {
+  return !hasConfirmedRange(s) && hasQuarterHourToVerify(s);
+}
+
+function timeStatusClass(status) {
+  if (status === "confirmé") return "confirmed";
+  if (status === "corrigé") return "corrected";
+  return "verify";
 }
 
 function clubClass(club) {
@@ -171,22 +444,115 @@ function clubClass(club) {
   return "Libre";
 }
 
+function shortText(value, max = 70) {
+  const text = String(value || "").trim();
+  return text.length > max ? text.slice(0, max - 1) + "…" : text;
+}
+
+function isArtificialCategory(value) {
+  const key = normalizeText(value);
+  return [
+    "socle prioritaire",
+    "socles prioritaires",
+    "besoin prioritaire",
+    "besoins prioritaires",
+    "besoin important",
+    "besoins importants",
+    "occupation technique",
+    "confort"
+  ].some(term => key.includes(term));
+}
+
+function realCategory(value) {
+  return isArtificialCategory(value) ? "" : String(value || "").trim();
+}
+
+function categoryLabel(s) {
+  return realCategory(s[8]) || "a preciser";
+}
+
+function usageLabel(s) {
+  return String(s[7] || "").trim() || "a preciser";
+}
+
+function displayNote(s) {
+  const parts = [];
+  if (isArtificialCategory(s[8])) parts.push(String(s[8]).trim());
+  if (s[10]) parts.push(String(s[10]).trim());
+  return Array.from(new Set(parts.filter(Boolean))).join(" - ");
+}
+
+function displayStatus(s) {
+  const parts = [s[9], getTimeStatus(s)].map(v => String(v || "").trim()).filter(Boolean);
+  return Array.from(new Set(parts)).join(" - ") || "a verifier";
+}
+
+function requestMetrics(rows = workingSlots) {
+  const metrics = {
+    total: 0,
+    existant_a_conserver: 0,
+    demande_en_plus: 0,
+    a_liberer: 0,
+    a_deplacer: 0,
+    a_preciser: 0,
+    categories: new Set()
+  };
+  rows.forEach(s => {
+    const hours = durationHours(s);
+    const status = requestStatus(s);
+    metrics.total += hours;
+    metrics[status] = (metrics[status] || 0) + hours;
+    const category = realCategory(s[8]);
+    if (category) metrics.categories.add(category);
+  });
+  return metrics;
+}
+
+function formatHours(value) {
+  return `${Number(value || 0).toFixed(1)} h`;
+}
+
+function slotInfoHTML(s, options = {}) {
+  const note = shortText(displayNote(s), 80);
+  let html = "";
+  html += `<div class="meta"><b>Categorie :</b> ${escapeHTML(categoryLabel(s))}</div>`;
+  html += `<div class="meta"><b>Usage :</b> ${escapeHTML(usageLabel(s))}</div>`;
+  if (options.showEquipment) html += `<div class="meta"><b>Equipement :</b> ${escapeHTML(normalizeEquipment(s[3]))}</div>`;
+  if (options.showDayTime) html += `<div class="meta"><b>Jour + horaire :</b> ${escapeHTML(s[2])} ${escapeHTML(s[4])}-${escapeHTML(s[5])}</div>`;
+  if (options.showRequestStatus) html += `<div class="meta"><b>Statut demande :</b> ${escapeHTML(requestStatusLabel(s))}</div>`;
+  if (options.showPriority) html += `<div class="meta"><b>Priorite :</b> ${escapeHTML(priorityLabel(s))}</div>`;
+  if (note) html += `<div class="meta"><b>Note :</b> ${escapeHTML(note)}</div>`;
+  if (options.showReplaceSlot && replaceSlotText(s)) html += `<div class="meta"><b>Remplace :</b> ${escapeHTML(shortText(replaceSlotText(s), 90))}</div>`;
+  if (options.showStatus) html += `<div class="meta"><b>Statut :</b> ${escapeHTML(displayStatus(s))}</div>`;
+  return html;
+}
+
 function renderPlanning() {
   const container = $("planningGrid");
   if (!container) return;
   const q = ($("q")?.value || "").toLowerCase();
-  let html = "<div></div>" + GYMS.map(g => `<div class="gymHead">${escapeHTML(g.name)}</div>`).join("");
+  const gyms = equipmentListFor(workingSlots);
+  container.style.gridTemplateColumns = `110px repeat(${gyms.length}, minmax(260px, 1fr))`;
+  container.style.minWidth = `${110 + gyms.length * 260}px`;
+  let html = "<div></div>" + gyms.map(name => `<div class="gymHead">${escapeHTML(name)}</div>`).join("");
 
   DAYS.forEach(day => {
     html += `<div class="day">${escapeHTML(day)}</div>`;
-    GYMS.forEach(gym => {
-      let list = slots.filter(s => s[2] === day && s[3] === gym.name).sort((a, b) => minutes(a[4]) - minutes(b[4]));
+    gyms.forEach(gym => {
+      let list = workingSlots.filter(s => s[2] === day && normalizeEquipment(s[3]) === gym).sort((a, b) => minutes(a[4]) - minutes(b[4]));
       if (q) list = list.filter(s => s.join(" ").toLowerCase().includes(q));
       html += '<div class="cell">';
       if (!list.length) html += '<span style="color:#647067">-</span>';
       list.forEach(s => {
         const sel = selected.includes(s[0]) ? " selected" : "";
-        html += `<div class="slot ${clubClass(s[6])}${sel}" onclick="selectSlot('${escapeHTML(s[0])}')" ondblclick="openEdit('${escapeHTML(s[0])}')"><div class="top">${escapeHTML(s[4])}-${escapeHTML(s[5])} - ${escapeHTML(s[6])}</div><div class="meta">${escapeHTML(s[7])}</div><div class="meta">${escapeHTML(s[8])} - ${escapeHTML(s[9])}</div></div>`;
+        const status = getTimeStatus(s);
+        const needsCheck = hasQuarterHourToVerify(s);
+        const corrected = status === "corrigé";
+        const badges = corrected
+          ? `<div class="slotBadges"><span class="timeBadge corrected">corrigé</span></div>`
+          : (needsCheck ? `<div class="slotBadges"><span class="timeBadge verify">à vérifier</span><span class="timeBadge soft">15/45 min</span></div>` : (status === "confirmé" ? `<div class="slotBadges"><span class="timeBadge confirmed">confirmé</span></div>` : ""));
+        const requestBadge = `<div class="slotBadges"><span class="requestBadge ${requestStatusClass(s)}">${escapeHTML(requestStatusLabel(s))}</span></div>`;
+        html += `<div class="slot ${clubClass(s[6])} ${requestStatusClass(s)}${sel} ${needsCheck ? "needsCheck" : ""}" onclick="selectSlot('${escapeHTML(s[0])}')" ondblclick="openEdit('${escapeHTML(s[0])}', 'work')"><div class="top"><strong>${escapeHTML(s[6] || "Sans association")}</strong></div>${slotInfoHTML(s, { showEquipment: true, showDayTime: true, showRequestStatus: true, showPriority: true, showReplaceSlot: true, showStatus: true })}${requestBadge}${badges}<div class="slotActions"><button class="slotAction" onclick="event.stopPropagation(); openEdit('${escapeHTML(s[0])}', 'work')">Modifier</button><button class="slotAction" onclick="event.stopPropagation(); setRequestStatus('${escapeHTML(s[0])}', 'a_liberer')">A liberer</button><button class="slotAction" onclick="event.stopPropagation(); setRequestStatus('${escapeHTML(s[0])}', 'a_deplacer')">A deplacer</button><button class="slotAction danger" onclick="event.stopPropagation(); deleteWorkSlot('${escapeHTML(s[0])}')">Supprimer</button></div></div>`;
       });
       html += "</div>";
     });
@@ -200,13 +566,33 @@ function renderCards() {
   box.innerHTML = GYMS.map(g => `<div class="tile"><b>${escapeHTML(g.name)}</b><p>${escapeHTML(g.capacity)}</p><p>${escapeHTML(g.role)}</p></div>`).join("");
 }
 
+function renderDemandSummary() {
+  const metrics = requestMetrics(workingSlots);
+  if ($("totalHoursKpi")) $("totalHoursKpi").textContent = formatHours(metrics.total);
+  if ($("extraHoursKpi")) $("extraHoursKpi").textContent = formatHours(metrics.demande_en_plus);
+  if ($("releaseHoursKpi")) $("releaseHoursKpi").textContent = formatHours(metrics.a_liberer);
+  if ($("categoryKpi")) $("categoryKpi").textContent = String(metrics.categories.size);
+  const box = $("demandSummary");
+  if (!box) return;
+  box.innerHTML = [
+    ["Total heures demandees", metrics.total],
+    ["Existantes a conserver", metrics.existant_a_conserver],
+    ["Demandees en plus", metrics.demande_en_plus],
+    ["Liberables", metrics.a_liberer],
+    ["A deplacer / echanger", metrics.a_deplacer],
+    ["A preciser", metrics.a_preciser],
+    ["Categories renseignees", metrics.categories.size]
+  ].map(([label, value]) => `<div class="summaryPill"><b>${escapeHTML(label)}</b><span>${typeof value === "number" && label !== "Categories renseignees" ? formatHours(value) : escapeHTML(value)}</span></div>`).join("");
+}
+
 function renderAll() {
   renderPlanning();
   renderCards();
+  renderDemandSummary();
+  renderClubView();
+  renderCurrentBaseView();
   renderLongProposals();
   renderLongDraftPlanning();
-  if ($("rowKpi")) $("rowKpi").textContent = slots.length;
-  if ($("proposalKpi")) $("proposalKpi").textContent = LONG_PROPOSALS.length;
 }
 
 function selectSlot(id) {
@@ -221,7 +607,7 @@ function clearSelection() {
 
 function editSelected() {
   if (selected.length !== 1) return toast("Selectionne un seul creneau a deplacer.");
-  openEdit(selected[0]);
+  openEdit(selected[0], "work");
 }
 
 function nextSlotId(list, prefix) {
@@ -230,19 +616,20 @@ function nextSlotId(list, prefix) {
 }
 
 function addSlot() {
-  if (!canEdit) return toast("Active le mode edition d'abord.");
-  const nextId = nextSlotId(slots, "S");
-  slots.push([nextId, "Ajout interface", "Mercredi", "Fongravey", "17:30", "19:00", "Libre / a arbitrer", "Nouveau creneau a preciser", "A confirmer", "A programmer", ""]);
+  const nextId = nextSlotId(workingSlots, "W");
+  workingSlots.push([nextId, "Ajout interface", "Mercredi", "Fongravey", "17h30", "19h00", "Libre / a arbitrer", "Nouveau creneau a preciser", "A confirmer", "A programmer", ""]);
+  slotMeta[nextId] = { ...getSlotMeta(nextId), requestStatus: "demande_en_plus", statut_demande: "demande_en_plus" };
+  saveLocalObject(LOCAL_SLOT_META_KEY, slotMeta);
+  saveLocalObject(LOCAL_WORKING_SLOTS_KEY, workingSlots);
   selected = [nextId];
   renderAll();
-  openEdit(nextId);
+  openEdit(nextId, "work");
 }
 
 function swapSelected() {
-  if (!canEdit) return toast("Active le mode edition d'abord.");
   if (selected.length !== 2) return toast("Selectionne deux creneaux a echanger.");
-  const a = slots.find(s => s[0] === selected[0]);
-  const b = slots.find(s => s[0] === selected[1]);
+  const a = workingSlots.find(s => s[0] === selected[0]);
+  const b = workingSlots.find(s => s[0] === selected[1]);
   if (!a || !b) return;
   [a[6], b[6]] = [b[6], a[6]];
   [a[7], b[7]] = [b[7], a[7]];
@@ -250,11 +637,51 @@ function swapSelected() {
   [a[9], b[9]] = [b[9], a[9]];
   [a[10], b[10]] = [b[10], a[10]];
   selected = [];
+  saveLocalObject(LOCAL_WORKING_SLOTS_KEY, workingSlots);
   renderAll();
-  saveAll("Echange envoye au Google Sheet");
+  toast("Echange applique au planning des demandes");
+}
+
+function deleteWorkSlot(id) {
+  if (originalMairieSlot(id)) {
+    if (!confirm("Ce creneau vient de la base mairie. Le marquer comme A liberer dans le planning des demandes ? La base mairie originale ne sera pas modifiee.")) return;
+    setRequestStatus(id, "a_liberer");
+    return;
+  }
+  if (!confirm("Supprimer ce créneau du planning de travail ? La base mairie originale ne sera pas modifiée.")) return;
+  workingSlots = workingSlots.filter(s => s[0] !== id);
+  selected = selected.filter(x => x !== id);
+  saveLocalObject(LOCAL_WORKING_SLOTS_KEY, workingSlots);
+  renderAll();
+  toast("Creneau supprime du planning des demandes");
+}
+
+function setRequestStatus(id, status) {
+  slotMeta[id] = { ...getSlotMeta(id), requestStatus: status, statut_demande: status };
+  saveLocalObject(LOCAL_SLOT_META_KEY, slotMeta);
+  renderAll();
+  toast("Statut de demande mis a jour");
+}
+
+function getListForContext(context = editContext) {
+  if (context.type === "blank") return blankSlots;
+  if (context.type === "scenario") return scenarios[context.scenario || activeScenario] || [];
+  return workingSlots;
+}
+
+function persistContext(context = editContext) {
+  if (context.type === "blank") saveLocalObject(LOCAL_BLANK_SLOTS_KEY, blankSlots);
+  if (context.type === "scenario") saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
+  if (context.type === "work") saveLocalObject(LOCAL_WORKING_SLOTS_KEY, workingSlots);
+}
+
+function originalMairieSlot(id) {
+  return slots.find(s => s[0] === id);
 }
 
 function fillEditDrawer(s) {
+  const meta = getSlotMeta(s[0]);
+  const mairieSlot = originalMairieSlot(s[0]);
   $("editId").value = s[0];
   $("editSource").value = s[1];
   $("editJour").value = s[2];
@@ -264,13 +691,23 @@ function fillEditDrawer(s) {
   $("editStatut").value = s[9];
   $("editGroupe").value = s[7];
   $("editNote").value = s[10];
-  $("editGym").innerHTML = GYMS.map(g => `<option ${g.name === s[3] ? "selected" : ""}>${escapeHTML(g.name)}</option>`).join("");
+  if ($("editRequestStatus")) $("editRequestStatus").value = requestStatus(s);
+  if ($("editPriority")) $("editPriority").value = priorityValue(s);
+  if ($("editReplaceSlot")) $("editReplaceSlot").value = replaceSlotText(s);
+  $("editMairieTime").value = mairieSlot ? mairieRange(mairieSlot) : "";
+  $("editSuggestedTime").value = suggestedRange(s);
+  $("editTimeStatus").value = meta.timeStatus || (hasQuarterHourToVerify(s) ? "à vérifier" : "à vérifier");
+  $("editClubNote").value = meta.clubNote || "";
+  const knownGyms = equipmentListFor([...slots, ...workingSlots, ...blankSlots, ...(scenarios[activeScenario] || [])]);
+  $("editGym").innerHTML = knownGyms.map(name => `<option ${name === normalizeEquipment(s[3]) ? "selected" : ""}>${escapeHTML(name)}</option>`).join("");
   $("editClub").innerHTML = CLUBS.map(c => `<option ${c === s[6] ? "selected" : ""}>${escapeHTML(c)}</option>`).join("") + "<option>Handball / Basket</option><option>Basket / Handball</option><option>Libre / a arbitrer</option>";
+  const details = document.querySelector(".sourceDetails");
+  if (details) details.style.display = mairieSlot ? "" : "none";
 }
 
-function openEdit(id) {
-  if (!canEdit) return toast("Active le mode edition d'abord.");
-  const s = slots.find(x => x[0] === id);
+function openEdit(id, type = "work", scenario = activeScenario) {
+  editContext = { type, id, scenario };
+  const s = getListForContext(editContext).find(x => x[0] === id);
   if (!s) return;
   fillEditDrawer(s);
   $("drawer").classList.add("show");
@@ -281,21 +718,50 @@ function closeDrawer() {
 }
 
 function saveEdit() {
-  const s = slots.find(x => x[0] === $("editId").value);
+  const list = getListForContext();
+  const s = list.find(x => x[0] === $("editId").value);
   if (!s) return;
   s[1] = $("editSource").value;
   s[2] = $("editJour").value;
-  s[3] = $("editGym").value;
-  s[4] = $("editDebut").value;
-  s[5] = $("editFin").value;
+  s[3] = normalizeEquipment($("editGym").value);
+  s[4] = normalizeTimeForWork($("editDebut").value);
+  s[5] = normalizeTimeForWork($("editFin").value);
   s[6] = $("editClub").value;
   s[7] = $("editGroupe").value;
   s[8] = $("editNature").value;
   s[9] = $("editStatut").value;
   s[10] = $("editNote").value;
+  saveSlotMetaFromDrawer(s);
+  persistContext();
   closeDrawer();
   renderAll();
-  saveAll("Creneau envoye au Google Sheet");
+  toast("Creneau mis a jour");
+}
+
+function saveSlotMetaFromDrawer(s) {
+  const start = normalizeTimeForWork($("editDebut").value.trim());
+  const end = normalizeTimeForWork($("editFin").value.trim());
+  slotMeta[s[0]] = {
+    confirmedStart: start,
+    confirmedEnd: end,
+    confirmedTime: start && end ? `${start}-${end}` : "",
+    timeStatus: $("editTimeStatus").value,
+    clubNote: $("editClubNote").value.trim(),
+    requestStatus: $("editRequestStatus")?.value || requestStatus(s),
+    statut_demande: $("editRequestStatus")?.value || requestStatus(s),
+    priority: $("editPriority")?.value || "",
+    replaceSlot: $("editReplaceSlot")?.value.trim() || ""
+  };
+  saveLocalObject(LOCAL_SLOT_META_KEY, slotMeta);
+}
+
+function applySuggestion() {
+  const id = $("editId")?.value;
+  const s = getListForContext().find(x => x[0] === id);
+  if (!s) return;
+  $("editDebut").value = normalizeTimeForWork(s[4]);
+  $("editFin").value = normalizeTimeForWork(s[5]);
+  $("editTimeStatus").value = "corrigé";
 }
 
 async function saveAll(reason) {
@@ -316,11 +782,458 @@ function exportCSV() {
 }
 
 function renderLongProposals() {
-  renderLongPlanning("longProposalCards", LONG_PROPOSALS, { empty: false, times: PROPOSAL_LONG_TIMES, subtitle: "Scenario de travail a verifier - non valide" });
+  updateScenarioSelectLabels();
+  loadScenarioMetaForm();
+  renderScenarioRecap();
+  renderEditableLongPlanning("longProposalCards", scenarios[activeScenario] || [], { type: "scenario", scenario: activeScenario, subtitle: "Scenario editable - non valide" });
 }
 
 function renderLongDraftPlanning() {
-  renderLongPlanning("longDraftPlanning", [], { empty: true, times: BLANK_LONG_TIMES });
+  renderEditableLongPlanning("longDraftPlanning", blankSlots, { type: "blank", subtitle: "Planning vierge editable" });
+}
+
+function toEditableSlot(seed, prefix, list) {
+  const base = seed ? copySlot(seed) : [nextSlotId(list, prefix), "Saisie locale", "Lundi", "Fongravey", "17h00", "18h30", "Libre / a arbitrer", "", "", "A verifier", ""];
+  base[0] = base[0] || nextSlotId(list, prefix);
+  base[3] = normalizeEquipment(base[3]);
+  base[4] = normalizeTimeForWork(base[4]);
+  base[5] = normalizeTimeForWork(base[5]);
+  return base;
+}
+
+function addBlankSlot() {
+  const item = toEditableSlot(null, "B", blankSlots);
+  blankSlots.push(item);
+  saveLocalObject(LOCAL_BLANK_SLOTS_KEY, blankSlots);
+  renderAll();
+  openEdit(item[0], "blank");
+}
+
+function scenarioLabel(id) {
+  const meta = ensureScenarioMeta(id);
+  const legacy = /^[123]$/.test(String(id)) ? `Scenario ${id}` : "Scenario";
+  return meta.name ? `${legacy} - ${meta.name}` : legacy;
+}
+
+function updateScenarioSelectLabels() {
+  const select = $("scenarioSelect");
+  if (!select) return;
+  ensureScenarioList();
+  const ids = scenarioIds();
+  select.innerHTML = "";
+  ids.forEach(id => {
+    const option = document.createElement("option");
+    option.value = id;
+    option.textContent = scenarioLabel(id);
+    select.appendChild(option);
+  });
+  select.value = activeScenario;
+}
+
+function loadScenarioMetaForm() {
+  const meta = ensureScenarioMeta(activeScenario);
+  if ($("scenarioName")) $("scenarioName").value = meta.name || "";
+  if ($("scenarioAuthor")) $("scenarioAuthor").value = meta.author || "";
+  if ($("scenarioDate")) $("scenarioDate").value = meta.date || todayISO();
+  if ($("scenarioGoal")) $("scenarioGoal").value = meta.goal || "";
+  if ($("scenarioComment")) $("scenarioComment").value = meta.comment || "";
+  if ($("scenarioStatus")) $("scenarioStatus").value = meta.status || "brouillon";
+}
+
+function readScenarioMetaForm(id = activeScenario) {
+  const meta = ensureScenarioMeta(id);
+  if ($("scenarioName")) meta.name = $("scenarioName").value.trim();
+  if ($("scenarioAuthor")) meta.author = $("scenarioAuthor").value.trim();
+  if ($("scenarioDate")) meta.date = $("scenarioDate").value || meta.date || todayISO();
+  if ($("scenarioGoal")) meta.goal = $("scenarioGoal").value.trim();
+  if ($("scenarioComment")) meta.comment = $("scenarioComment").value.trim();
+  if ($("scenarioStatus")) meta.status = $("scenarioStatus").value || "brouillon";
+  return meta;
+}
+
+function saveScenarioMeta(id = activeScenario) {
+  readScenarioMetaForm(id);
+  saveLocalObject(LOCAL_SCENARIO_META_KEY, scenarioMeta);
+  updateScenarioSelectLabels();
+  renderScenarioRecap();
+}
+
+function selectScenario(value) {
+  saveScenarioMeta(activeScenario);
+  activeScenario = String(value || "1");
+  ensureScenarioMeta(activeScenario);
+  renderLongProposals();
+}
+
+function scenarioRowsFromSource(source) {
+  if (source === "blank") return [];
+  if (source === "duplicate") return (scenarios[activeScenario] || []).map(s => copySlot(s));
+  return workingSlots.map(s => copySlot(s));
+}
+
+function createNewScenario() {
+  const source = $("newScenarioSource")?.value || "current";
+  if (source === "duplicate" && !scenarios[activeScenario]) ensureScenarioList();
+  const id = newScenarioId();
+  scenarios[id] = scenarioRowsFromSource(source);
+  const sourceName = source === "blank" ? "scenario vierge" : source === "duplicate" ? "duplication" : "planning des demandes";
+  scenarioMeta[id] = {
+    name: source === "blank" ? "Nouveau scenario vierge" : source === "duplicate" ? "Copie de " + scenarioLabel(activeScenario) : "Base actuelle corrigee",
+    author: "",
+    date: todayISO(),
+    goal: "",
+    comment: "",
+    status: "brouillon"
+  };
+  activeScenario = id;
+  saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
+  saveLocalObject(LOCAL_SCENARIO_META_KEY, scenarioMeta);
+  renderLongProposals();
+  toast("Scenario cree depuis " + sourceName);
+}
+
+function createScenarioFromCurrent() {
+  const id = newScenarioId();
+  scenarios[id] = workingSlots.map(s => copySlot(s));
+  scenarioMeta[id] = { name: "Base actuelle corrigee", author: "", date: todayISO(), goal: "", comment: "", status: "brouillon" };
+  activeScenario = id;
+  saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
+  saveLocalObject(LOCAL_SCENARIO_META_KEY, scenarioMeta);
+  renderLongProposals();
+  toast("Scenario cree depuis le planning des demandes");
+}
+
+function createScenarioFromBlank() {
+  const id = newScenarioId();
+  scenarios[id] = [];
+  scenarioMeta[id] = { name: "Scenario vierge", author: "", date: todayISO(), goal: "", comment: "", status: "brouillon" };
+  activeScenario = id;
+  saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
+  saveLocalObject(LOCAL_SCENARIO_META_KEY, scenarioMeta);
+  renderLongProposals();
+  toast("Scenario vierge cree");
+}
+
+function addScenarioSlot() {
+  ensureScenarioList();
+  if (!scenarios[activeScenario]) scenarios[activeScenario] = [];
+  const item = toEditableSlot(null, "SC" + activeScenario + "-", scenarios[activeScenario]);
+  scenarios[activeScenario].push(item);
+  saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
+  renderAll();
+  openEdit(item[0], "scenario", activeScenario);
+}
+
+function saveScenario() {
+  saveScenarioMeta(activeScenario);
+  saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
+  toast("Scenario enregistre localement");
+  renderLongProposals();
+}
+
+function renameScenario() {
+  const meta = ensureScenarioMeta(activeScenario);
+  const next = prompt("Nouveau nom du scenario", meta.name || scenarioLabel(activeScenario));
+  if (next === null) return;
+  meta.name = next.trim();
+  saveLocalObject(LOCAL_SCENARIO_META_KEY, scenarioMeta);
+  renderLongProposals();
+}
+
+function deleteScenario() {
+  ensureScenarioList();
+  if (!confirm("Supprimer ce scenario local ? La base mairie et le planning des demandes ne seront pas modifies.")) return;
+  delete scenarios[activeScenario];
+  delete scenarioMeta[activeScenario];
+  if (!scenarioIds().length) {
+    const id = newScenarioId();
+    scenarios[id] = [];
+    scenarioMeta[id] = { name: "Nouveau scenario", author: "", date: todayISO(), goal: "", comment: "", status: "brouillon" };
+  }
+  activeScenario = scenarioIds()[0];
+  saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
+  saveLocalObject(LOCAL_SCENARIO_META_KEY, scenarioMeta);
+  renderLongProposals();
+}
+
+function scenarioPayload(id = activeScenario) {
+  const meta = ensureScenarioMeta(id);
+  const rows = scenarios[id] || [];
+  return {
+    scenario_id: String(id),
+    scenario_nom: meta.name || "",
+    scenario_auteur: meta.author || "",
+    scenario_date: meta.date || "",
+    scenario_statut: meta.status || "brouillon",
+    scenario_objectif: meta.goal || "",
+    scenario_commentaire: meta.comment || "",
+    creneaux_json: JSON.stringify(rows.map(arrayToDemandRow)),
+    creneaux: rows.map(arrayToDemandRow)
+  };
+}
+
+function safeFilename(value) {
+  return normalizeText(value || "scenario").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "scenario";
+}
+
+function exportScenarioJSON(id = activeScenario) {
+  saveScenarioMeta(id);
+  const payload = scenarioPayload(id);
+  const label = payload.scenario_nom || `scenario-${id}`;
+  downloadTextFile(`${safeFilename(label)}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+}
+
+function durationHours(s) {
+  const start = minutes(s[4]);
+  const end = minutes(s[5]);
+  return Math.max(0, end - start) / 60;
+}
+
+function scenarioStats(id) {
+  const rows = scenarios[id] || [];
+  const hoursByClub = {};
+  const equipments = new Set();
+  rows.forEach(s => {
+    const club = s[6] || "Autres";
+    hoursByClub[club] = (hoursByClub[club] || 0) + durationHours(s);
+    if (s[3]) equipments.add(normalizeEquipment(s[3]));
+  });
+  return { rows, hoursByClub, equipments: Array.from(equipments).sort() };
+}
+
+function scenarioSummaryText(id = activeScenario) {
+  const meta = ensureScenarioMeta(id);
+  const stats = scenarioStats(id);
+  const hours = Object.entries(stats.hoursByClub)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([club, value]) => `${club}: ${value.toFixed(1)} h`)
+    .join(", ") || "Aucune heure";
+  return [
+    `Scenario ${id}${meta.name ? " - " + meta.name : ""}`,
+    `Auteur: ${meta.author || "-"}`,
+    `Date: ${meta.date || "-"}`,
+    `Statut: ${meta.status || "brouillon"}`,
+    `Objectif: ${meta.goal || "-"}`,
+    `Creneaux: ${stats.rows.length}`,
+    `Heures par club: ${hours}`,
+    `Equipements: ${stats.equipments.join(", ") || "-"}`,
+    `Commentaire: ${meta.comment || "-"}`
+  ].join("\n");
+}
+
+async function copyScenarioSummary(id = activeScenario) {
+  saveScenarioMeta(id);
+  const text = scenarioSummaryText(id);
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("Resume copie");
+  } catch (e) {
+    prompt("Copie le resume du scenario", text);
+  }
+}
+
+function openScenario(id) {
+  activeScenario = String(id || "1");
+  renderLongProposals();
+  showTab("propositionsLongues", Array.from(document.querySelectorAll(".tabs button")).find(b => b.textContent.includes("Scenarios")));
+}
+
+function printScenario(id) {
+  openScenario(id);
+  setTimeout(() => window.print(), 50);
+}
+
+function renderScenarioRecap() {
+  const container = $("scenarioRecap");
+  if (!container) return;
+  ensureScenarioList();
+  container.innerHTML = scenarioIds().map(id => {
+    const meta = ensureScenarioMeta(id);
+    const stats = scenarioStats(id);
+    const hours = Object.entries(stats.hoursByClub)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([club, value]) => `<span>${escapeHTML(club)}: ${value.toFixed(1)} h</span>`)
+      .join("");
+    return `<article class="scenarioCard"><div class="proposalHead"><strong>${escapeHTML(scenarioLabel(id))}</strong><span class="priority">${escapeHTML(meta.status || "brouillon")}</span></div><p><b>Auteur</b><br>${escapeHTML(meta.author || "-")}</p><p><b>Total creneaux</b><br>${stats.rows.length}</p><p><b>Heures par club</b><br><span class="hoursList">${hours || "Aucune heure"}</span></p><p><b>Equipements</b><br>${escapeHTML(stats.equipments.join(", ") || "-")}</p><div class="slotActions"><button class="slotAction" onclick="openScenario('${id}')">Ouvrir</button><button class="slotAction" onclick="printScenario('${id}')">Imprimer ce scenario</button><button class="slotAction" onclick="exportScenarioJSON('${id}')">Export JSON</button></div></article>`;
+  }).join("");
+}
+
+function deleteEditableSlot(id, type, scenario = activeScenario) {
+  if (type === "blank") {
+    blankSlots = blankSlots.filter(s => s[0] !== id);
+    saveLocalObject(LOCAL_BLANK_SLOTS_KEY, blankSlots);
+  } else if (type === "scenario") {
+    scenarios[scenario] = (scenarios[scenario] || []).filter(s => s[0] !== id);
+    saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
+  }
+  renderAll();
+}
+
+function overlapLayout(rows, gym) {
+  const layouts = {};
+  LONG_DAYS.forEach(day => {
+    const dayRows = rows
+      .filter(s => normalizeEquipment(s[3]) === gym && s[2] === day)
+      .sort((a, b) => minutes(a[4]) - minutes(b[4]) || minutes(a[5]) - minutes(b[5]));
+    const lanes = [];
+    dayRows.forEach(s => {
+      const start = minutes(s[4]);
+      const end = minutes(s[5]);
+      let lane = lanes.findIndex(lastEnd => lastEnd <= start);
+      if (lane < 0) {
+        lane = lanes.length;
+        lanes.push(end);
+      } else {
+        lanes[lane] = end;
+      }
+      const overlaps = dayRows.filter(other => other[0] !== s[0] && minutes(other[4]) < end && minutes(other[5]) > start);
+      const maxLane = overlaps.reduce((max, other) => Math.max(max, layouts[other[0]]?.lane ?? 0), lane);
+      layouts[s[0]] = { lane, count: Math.max(lanes.length, maxLane + 1, 1) };
+    });
+    dayRows.forEach(s => {
+      const start = minutes(s[4]);
+      const end = minutes(s[5]);
+      const overlapping = dayRows.filter(other => minutes(other[4]) < end && minutes(other[5]) > start);
+      const count = Math.max(...overlapping.map(other => (layouts[other[0]]?.lane ?? 0) + 1), 1);
+      layouts[s[0]].count = count;
+    });
+  });
+  return layouts;
+}
+
+function renderEditableLongPlanning(containerId, rows, options = {}) {
+  const container = $(containerId);
+  if (!container) return;
+  const times = BLANK_LONG_TIMES;
+  const first = minutes(times[0]);
+  const last = minutes(times[times.length - 1]);
+  const rowCount = times.length - 1;
+  const type = options.type || "blank";
+  const scenario = options.scenario || activeScenario;
+  const gyms = equipmentListFor(rows);
+
+  container.innerHTML = gyms.map(gym => {
+    const layouts = overlapLayout(rows, gym);
+    const blocks = rows.filter(s => normalizeEquipment(s[3]) === gym).map(s => {
+      const start = minutes(s[4]);
+      const end = minutes(s[5]);
+      const startLine = Math.round((Math.max(start, first) - first) / 30) + 2;
+      const endLine = Math.round((Math.min(end, last) - first) / 30) + 2;
+      const dayIndex = LONG_DAYS.indexOf(s[2]);
+      if (dayIndex < 0 || end <= first || start >= last || endLine <= startLine) return "";
+      const deleteButton = `<button class="miniDelete" onclick="event.stopPropagation(); deleteEditableSlot('${escapeHTML(s[0])}', '${escapeHTML(type)}', '${escapeHTML(scenario)}')">Supprimer</button>`;
+      const layout = layouts[s[0]] || { lane: 0, count: 1 };
+      const overlapStyle = layout.count > 1 ? `width:calc(100% / ${layout.count});margin-left:calc(${layout.lane} * 100% / ${layout.count});` : "";
+      const category = realCategory(s[8]);
+      const note = displayNote(s);
+      return `<div class="meetingBlock editableBlock slot ${clubClass(s[6])} ${requestStatusClass(s)}" onclick="openEdit('${escapeHTML(s[0])}', '${escapeHTML(type)}', '${escapeHTML(scenario)}')" style="grid-column:${dayIndex + 2};grid-row:${startLine}/${endLine};${overlapStyle}"><strong>${escapeHTML(s[6])}</strong><span>${escapeHTML(s[4])}-${escapeHTML(s[5])}</span><span>${escapeHTML(requestStatusLabel(s))}</span>${category ? `<span>Cat. ${escapeHTML(shortText(category, 28))}</span>` : ""}${s[7] ? `<span>${escapeHTML(shortText(s[7], 32))}</span>` : ""}${note ? `<span>Note: ${escapeHTML(shortText(note, 34))}</span>` : ""}${deleteButton}</div>`;
+    }).join("");
+
+    return `<section class="meetingGym"><div class="meetingGymHead"><h3>${escapeHTML(gym)}</h3>${options.subtitle ? `<span>${escapeHTML(options.subtitle)}</span>` : ""}</div><div class="meetingGrid" style="--row-count:${rowCount}"><div class="meetingCorner"></div>${LONG_DAYS.map(day => `<div class="meetingDay">${escapeHTML(day)}</div>`).join("")}${times.slice(0, -1).map(time => `<div class="meetingTime">${escapeHTML(time)}</div>${LONG_DAYS.map(day => `<div class="meetingCell"></div>`).join("")}`).join("")}${blocks}</div></section>`;
+  }).join("");
+}
+
+function clubGroup(association) {
+  const value = String(association || "").toLowerCase();
+  if (value.includes("handi") || value.includes("handisport")) return "Handi-basket / handisport";
+  if (value.includes("basket") && !value.includes("handball")) return "Basket";
+  if (value.includes("handball")) return "Handball";
+  if (value.includes("volley")) return "Volley";
+  if (value.includes("badminton")) return "Badminton";
+  if (value.includes("futsal")) return "Futsal";
+  return "Autres";
+}
+
+function renderClubView() {
+  const container = $("clubView");
+  if (!container) return;
+  const preferred = ["Basket", "Handball", "Volley", "Badminton", "Futsal", "Handi-basket / handisport", "Autres"];
+  const groups = preferred.filter(group => workingSlots.some(s => clubGroup(s[6]) === group));
+  if (!groups.length) {
+    container.innerHTML = '<div class="emptyClub">Aucun creneau charge.</div>';
+    return;
+  }
+  container.innerHTML = groups.map(group => {
+    const list = workingSlots
+      .filter(s => clubGroup(s[6]) === group)
+      .sort((a, b) => DAYS.indexOf(a[2]) - DAYS.indexOf(b[2]) || normalizeEquipment(a[3]).localeCompare(normalizeEquipment(b[3])) || minutes(a[4]) - minutes(b[4]));
+    const metrics = requestMetrics(list);
+    const rows = list.length ? list.map(s => {
+      const status = getTimeStatus(s);
+      const note = shortText(displayNote(s), 58);
+      const replaceText = shortText(replaceSlotText(s), 58);
+      return `<div class="clubSlot compact ${clubClass(s[6])} ${requestStatusClass(s)}"><div class="clubSlotHead"><strong>${escapeHTML(s[6] || "Sans association")}</strong></div><div class="clubMiniLine"><b>Categorie</b><span>${escapeHTML(categoryLabel(s))}</span></div><div class="clubMiniLine"><b>Usage</b><span>${escapeHTML(shortText(usageLabel(s), 44))}</span></div><div class="clubMiniLine"><b>Equipement</b><span>${escapeHTML(normalizeEquipment(s[3]))}</span></div><div class="clubMiniLine"><b>Jour</b><span>${escapeHTML(s[2])} ${escapeHTML(s[4])}-${escapeHTML(s[5])}</span></div><div class="clubMiniLine"><b>Demande</b><span>${escapeHTML(requestStatusLabel(s))}</span></div><div class="clubMiniLine"><b>Priorite</b><span>${escapeHTML(priorityLabel(s))}</span></div>${note ? `<div class="clubMiniLine"><b>Note</b><span>${escapeHTML(note)}</span></div>` : ""}${replaceText ? `<div class="clubMiniLine"><b>Remplace</b><span>${escapeHTML(replaceText)}</span></div>` : ""}<div class="clubMiniLine"><b>Statut</b><span>${escapeHTML(displayStatus(s))}</span></div><div class="clubCardFoot"><span class="requestBadge ${requestStatusClass(s)}">${escapeHTML(requestStatusLabel(s))}</span><button class="slotAction" onclick="openEdit('${escapeHTML(s[0])}', 'work')">Modifier</button></div></div>`;
+    }).join("") : '<div class="emptyClub">Aucun creneau charge.</div>';
+    const summary = `<div class="clubStats"><span>Total ${formatHours(metrics.total)}</span><span>Conserver ${formatHours(metrics.existant_a_conserver)}</span><span>En plus ${formatHours(metrics.demande_en_plus)}</span><span>Liberables ${formatHours(metrics.a_liberer)}</span><span>A deplacer ${formatHours(metrics.a_deplacer)}</span></div>`;
+    return `<section class="clubGroup ${clubClass(group)}"><div class="clubGroupHead"><h3>${escapeHTML(group)}</h3><span>${formatHours(metrics.total)}</span></div>${summary}<div class="clubSlotsGrid">${rows}</div></section>`;
+  }).join("");
+}
+
+function renderCurrentBaseView() {
+  const container = $("currentBaseList");
+  if (!container) return;
+  if (!slots.length) {
+    container.innerHTML = '<div class="emptyClub">Aucune donnee mairie chargee.</div>';
+    return;
+  }
+  const rows = slots
+    .slice()
+    .sort((a, b) => DAYS.indexOf(a[2]) - DAYS.indexOf(b[2]) || normalizeEquipment(a[3]).localeCompare(normalizeEquipment(b[3])) || minutes(a[4]) - minutes(b[4]));
+  container.innerHTML = `<div class="currentGrid">${rows.map(s => `<div class="clubSlot compact ${clubClass(s[6])}"><div class="clubSlotHead"><strong>${escapeHTML(s[6] || "Sans association")}</strong><span>${escapeHTML(s[4])}-${escapeHTML(s[5])}</span></div><div class="meta">${escapeHTML(s[2])} - ${escapeHTML(normalizeEquipment(s[3]))}</div>${slotInfoHTML(s)}<div class="slotBadges"><span class="timeBadge soft">base mairie</span></div></div>`).join("")}</div>`;
+}
+
+function addClubProposal() {
+  const item = {
+    id: String(Date.now()),
+    club: $("proposalClub").value,
+    priority: $("proposalPriority").value,
+    main: $("proposalMain").value.trim(),
+    equipment: $("proposalEquipment").value.trim(),
+    day: $("proposalDay").value.trim(),
+    time: $("proposalTime").value.trim(),
+    alt1: $("proposalAlt1").value.trim(),
+    alt2: $("proposalAlt2").value.trim(),
+    fallback: $("proposalFallback").value.trim(),
+    reason: $("proposalReason").value.trim(),
+    comment: $("proposalComment").value.trim()
+  };
+  if (!item.main && !item.equipment && !item.day && !item.time && !item.alt1 && !item.alt2 && !item.fallback && !item.reason && !item.comment) return toast("Ajoute au moins une demande ou justification.");
+  clubProposals.unshift(item);
+  saveLocalObject(LOCAL_CLUB_PROPOSALS_KEY, clubProposals);
+  clearClubProposalForm();
+  renderClubProposals();
+  toast("Proposition club enregistree localement");
+}
+
+function clearClubProposalForm() {
+  ["proposalMain", "proposalEquipment", "proposalDay", "proposalTime", "proposalAlt1", "proposalAlt2", "proposalFallback", "proposalReason", "proposalComment"].forEach(id => {
+    if ($(id)) $(id).value = "";
+  });
+}
+
+function deleteClubProposal(id) {
+  clubProposals = clubProposals.filter(p => p.id !== id);
+  saveLocalObject(LOCAL_CLUB_PROPOSALS_KEY, clubProposals);
+  renderClubProposals();
+}
+
+function renderClubProposals() {
+  const container = $("clubProposalList");
+  if (!container) return;
+  if (!clubProposals.length) {
+    container.innerHTML = '<div class="emptyClub">Aucune proposition locale pour le moment.</div>';
+    return;
+  }
+  const groups = ["Basket", "Handball", "Volley", "Badminton", "Futsal", "Handi-basket / handisport", "Autres"];
+  container.innerHTML = groups.map(group => {
+    const items = clubProposals.filter(p => p.club === group);
+    if (!items.length) return "";
+    return `<section class="proposalGroup"><h3>${escapeHTML(group)}</h3>${items.map(renderClubProposalItem).join("")}</section>`;
+  }).join("");
+}
+
+function renderClubProposalItem(p) {
+  return `<article class="proposalItem"><div class="proposalHead"><strong>${escapeHTML(p.club)}</strong><span class="priority ${escapeHTML(p.priority)}">${escapeHTML(p.priority)}</span></div>${p.main ? `<p><b>Demande principale</b><br>${escapeHTML(p.main)}</p>` : ""}${p.equipment ? `<p><b>Equipement souhaite</b><br>${escapeHTML(p.equipment)}</p>` : ""}${p.day ? `<p><b>Jour souhaite</b><br>${escapeHTML(p.day)}</p>` : ""}${p.time ? `<p><b>Horaire souhaite</b><br>${escapeHTML(p.time)}</p>` : ""}${p.reason ? `<p><b>Justification</b><br>${escapeHTML(p.reason)}</p>` : ""}${p.alt1 ? `<p><b>Alternative 1</b><br>${escapeHTML(p.alt1)}</p>` : ""}${p.alt2 ? `<p><b>Alternative 2</b><br>${escapeHTML(p.alt2)}</p>` : ""}${p.fallback ? `<p><b>Dernier recours</b><br>${escapeHTML(p.fallback)}</p>` : ""}${p.comment ? `<p><b>Commentaire libre</b><br>${escapeHTML(p.comment)}</p>` : ""}<button class="secondary" onclick="deleteClubProposal('${escapeHTML(p.id)}')">Supprimer</button></article>`;
 }
 
 function renderLongPlanning(containerId, rows, options = {}) {
