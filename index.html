@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Blanquefort - Coordination des creneaux sportifs</title>
+  <title>Blanquefort - Coordination des créneaux sportifs</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,8 +12,8 @@
       <div class="brand">
         <img class="city-logo" src="logo_blanquefort_blanc.png" alt="Blanquefort" />
         <div>
-          <h1>Coordination des creneaux sportifs</h1>
-          <p>Base mairie - coordination - document de reunion</p>
+          <h1>Coordination des créneaux sportifs</h1>
+          <p>Base mairie - coordination - document de réunion</p>
         </div>
       </div>
       <div class="header-actions">
@@ -25,19 +25,19 @@
   <main class="wrap">
     <section class="card">
       <div class="tabs">
-        <button onclick="showTab('accueil', this)">Accueil</button>
-        <button class="active" onclick="showTab('modifier', this)">Planning des demandes</button>
+        <button class="active" onclick="showTab('accueil', this)">Accueil</button>
+        <button onclick="showTab('modifier', this)">Planning des demandes</button>
         <button onclick="showTab('parClub', this)">Par club</button>
-        <button onclick="showTab('propositionsLongues', this)">Scenarios</button>
+        <button onclick="showTab('propositionsLongues', this)">Scénarios</button>
       </div>
     </section>
 
-    <section class="section" id="accueil">
+    <section class="section active" id="accueil">
       <div class="hero">
         <div class="big">
           <div>
-            <h2>Atelier creneaux</h2>
-            <p>Base de travail partagee pour coordonner les creneaux sportifs. Les ajustements restent des scenarios de reunion tant qu'ils ne sont pas confirmes.</p>
+            <h2>Atelier créneaux</h2>
+            <p>Base de travail partagée pour coordonner les créneaux sportifs. Les ajustements restent des scénarios de réunion tant qu’ils ne sont pas confirmés.</p>
           </div>
           <div class="legend">
             <span class="chip"><span class="dot basketDot"></span>Basket</span>
@@ -49,92 +49,125 @@
           </div>
         </div>
         <div class="kpis">
-          <div class="kpi"><b id="totalHoursKpi">0 h</b><span>heures demandees</span></div>
+          <div class="kpi"><b id="totalHoursKpi">0 h</b><span>heures demandées</span></div>
           <div class="kpi"><b id="extraHoursKpi">0 h</b><span>heures en plus</span></div>
-          <div class="kpi"><b id="releaseHoursKpi">0 h</b><span>heures liberables</span></div>
-          <div class="kpi"><b id="categoryKpi">0</b><span>categories renseignees</span></div>
+          <div class="kpi"><b id="releaseHoursKpi">0 h</b><span>heures libérables</span></div>
+          <div class="kpi"><b id="categoryKpi">0</b><span>catégories renseignées</span></div>
         </div>
       </div>
       <div class="notice">Horaires téléchargés depuis l’Excel mairie — base à confirmer par les associations.</div>
-      <div class="notice">Les donnees de depart proviennent de la base mairie / Google Sheet. Elles sont normalisees dans le Planning des demandes.</div>
+      <div class="notice">Les données de départ proviennent de la base mairie / Google Sheet. Elles sont normalisées dans le Planning des demandes.</div>
+      <section class="helpGuide">
+        <h2>Mode d’emploi clubs</h2>
+        <div class="notice">Ce support sert à préparer le travail sur les créneaux 2026-2027. Les données peuvent être corrigées ou complétées pour faciliter les échanges.</div>
+        <ol>
+          <li>Aller dans <b>Par club</b> pour vérifier les créneaux de son association.</li>
+          <li>Vérifier les horaires, équipements, catégories et usages.</li>
+          <li>Utiliser <b>Modifier</b> pour corriger une information.</li>
+          <li>Utiliser <b>Ajouter un créneau</b> si une demande manque.</li>
+          <li>Choisir le bon statut : <b>Existant à conserver</b>, <b>Demande en plus</b>, <b>À libérer</b>, <b>À déplacer / échanger</b> ou <b>À préciser</b>.</li>
+          <li>Utiliser <b>Scénarios</b> pour proposer une version de travail, depuis le Planning des demandes ou depuis un scénario vide.</li>
+          <li>Donner un nom clair au scénario, indiquer l’auteur / club et l’objectif.</li>
+          <li>Enregistrer le scénario localement.</li>
+          <li>Imprimer ou exporter si besoin.</li>
+          <li>Signaler simplement si quelque chose ne fonctionne pas ou si un créneau manque.</li>
+        </ol>
+        <div class="notice">Les scénarios sont sauvegardés localement dans le navigateur. Pour transmettre une proposition, utilisez l’impression, l’export JSON ou envoyez une capture / PDF.</div>
+      </section>
       <div id="syncStatus" class="notice">Chargement...</div>
     </section>
 
-    <section class="card section active" id="modifier">
+    <section class="card section" id="modifier">
       <h2>Planning des demandes</h2>
       <div class="notice">Horaires téléchargés depuis l’Excel mairie — base à confirmer par les associations.</div>
       <div class="notice">Planning de travail : version modifiable pour préparer 2026-2027.</div>
-      <div class="notice">Espace de travail pour conserver, demander en plus, liberer, deplacer ou preciser les creneaux avant validation collective.</div>
-      <div class="notice">Ce planning regroupe les demandes des associations pour preparer 2026-2027. Il ne vaut pas validation mairie.</div>
+      <div class="notice">Espace de travail pour conserver, demander en plus, libérer, déplacer ou préciser les créneaux avant validation collective.</div>
+      <div class="notice">Ce planning regroupe les demandes des associations pour préparer 2026-2027. Il ne vaut pas validation mairie.</div>
       <div id="demandSummary" class="demandSummary"></div>
       <div id="overlapBanner"></div>
+      <div class="planningFilters">
+        <label>Équipement
+          <select id="planningGymFilter" onchange="renderPlanning()"></select>
+        </label>
+        <label>Club
+          <select id="planningClubFilter" onchange="renderPlanning()"></select>
+        </label>
+        <label>Jour
+          <select id="planningDayFilter" onchange="renderPlanning()"></select>
+        </label>
+        <label>Statut demande
+          <select id="planningStatusFilter" onchange="renderPlanning()"></select>
+        </label>
+      </div>
       <div class="toolbar">
-        <button class="warn editOnly" onclick="swapSelected()">Echanger les 2 creneaux selectionnes</button>
-        <button class="editOnly" onclick="editSelected()">Deplacer / modifier</button>
-        <button class="editOnly" onclick="addSlot()">Ajouter un creneau</button>
-        <button class="secondary" onclick="clearSelection()">Annuler selection</button>
+        <button class="warn editOnly" onclick="swapSelected()">Échanger les 2 créneaux sélectionnés</button>
+        <button class="editOnly" onclick="editSelected()">Déplacer / modifier</button>
+        <button onclick="addSlot()">Ajouter un créneau</button>
+        <button class="secondary" onclick="clearSelection()">Annuler sélection</button>
         <button class="secondary" onclick="reloadFromSheet()">Recharger Sheet</button>
         <button class="secondary" onclick="exportCSV()">Exporter CSV</button>
         <button class="secondary" onclick="window.print()">Imprimer le planning des demandes</button>
-        <input class="search" id="q" oninput="renderAll()" placeholder="Filtrer : club, gymnase, jour..." />
+        <input class="search" id="q" oninput="renderPlanning()" placeholder="Recherche rapide..." />
       </div>
       <div class="scroll"><div class="grid" id="planningGrid"></div></div>
     </section>
 
     <section class="card section" id="parClub">
       <h2>Par club</h2>
-      <div class="notice">Lecture par association des demandes 2026-2027. Chaque creneau peut etre ouvert et modifie.</div>
+      <div class="notice">Lecture par association des demandes 2026-2027. Chaque créneau peut être ouvert et modifié.</div>
+      <div class="toolbar"><button onclick="addSlot()">Ajouter un créneau</button></div>
       <div id="clubView" class="clubview"></div>
     </section>
 
     <section class="card section" id="viergeLong" style="display:none">
-      <h2>Planning vierge editable</h2>
-      <div class="notice">Grille de travail editable, utilisable pour construire un planning sans partir de la base mairie.</div>
-      <div class="toolbar"><button onclick="addBlankSlot()">Ajouter un creneau</button><button class="secondary" onclick="window.print()">Imprimer / exporter</button></div>
+      <h2>Planning vierge éditable</h2>
+      <div class="notice">Grille de travail éditable, utilisable pour construire un planning sans partir de la base mairie.</div>
+      <div class="toolbar"><button onclick="addBlankSlot()">Ajouter un créneau</button><button class="secondary" onclick="window.print()">Imprimer / exporter</button></div>
       <div id="longDraftPlanning"></div>
     </section>
 
     <section class="card section" id="propositionsLongues">
-      <h2>Scenarios</h2>
-      <div class="notice">Propositions de scenarios a verifier en reunion - non valides.</div>
-      <div class="notice">Ces scenarios sont des plannings de travail non valides, destines a tester des repartitions possibles.</div>
-      <div class="notice">Les scenarios sont sauvegardes localement sur ce navigateur. Pour les partager, utiliser l'impression/export ou prevoir une sauvegarde Google Sheet dans une version suivante.</div>
-      <div class="notice">Cet espace est un espace de travail. Les creneaux peuvent etre ajoutes, modifies ou supprimes sans modifier la base mairie.</div>
+      <h2>Scénarios</h2>
+      <div class="notice">Propositions de scénarios à vérifier en réunion - non validées.</div>
+      <div class="notice">Ces scénarios sont des plannings de travail non validés, destinés à tester des répartitions possibles.</div>
+      <div class="notice">Les scénarios sont sauvegardés localement sur ce navigateur. Pour les partager, utiliser l’impression/export ou prévoir une sauvegarde Google Sheet dans une version suivante.</div>
+      <div class="notice">Cet espace est un espace de travail. Les créneaux peuvent être ajoutés, modifiés ou supprimés sans modifier la base mairie.</div>
       <div class="toolbar">
         <select id="scenarioSelect" onchange="selectScenario(this.value)"></select>
-        <select id="newScenarioSource"><option value="current">Creer depuis planning des demandes</option><option value="blank">Creer un scenario vierge</option><option value="duplicate">Dupliquer le scenario selectionne</option></select>
-        <button onclick="createNewScenario()">Creer un nouveau scenario</button>
+        <select id="newScenarioSource"><option value="current">Depuis Planning des demandes</option><option value="blank">Scénario vide</option><option value="duplicate">Dupliquer le scénario affiché</option></select>
+        <button onclick="createNewScenario()">Créer le scénario</button>
         <button onclick="renameScenario()">Renommer</button>
-        <button class="secondary" onclick="deleteScenario()">Supprimer ce scenario</button>
-        <button onclick="addScenarioSlot()">Ajouter un creneau</button>
-        <button onclick="saveScenario()">Enregistrer le scenario</button>
-        <button class="secondary" onclick="window.print()">Imprimer ce scenario</button>
+        <button class="secondary" onclick="deleteScenario()">Supprimer ce scénario</button>
+        <button onclick="addScenarioSlot()">Ajouter un créneau</button>
+        <button onclick="saveScenario()">Enregistrer le scénario</button>
+        <button class="secondary" onclick="window.print()">Imprimer ce scénario</button>
         <button class="secondary" onclick="exportScenarioJSON()">Export JSON</button>
-        <button class="secondary" onclick="copyScenarioSummary()">Copier resume</button>
+        <button class="secondary" onclick="copyScenarioSummary()">Copier résumé</button>
       </div>
       <div class="scenarioMeta formgrid">
-        <div><label>Nom du scenario</label><input id="scenarioName" placeholder="Scenario 1 - base actuelle corrigee" /></div>
+        <div><label>Nom du scénario</label><input id="scenarioName" placeholder="Scénario 1 - base actuelle corrigée" /></div>
         <div><label>Auteur</label><input id="scenarioAuthor" placeholder="Nom ou service" /></div>
-        <div><label>Date de creation</label><input id="scenarioDate" type="date" /></div>
-        <div><label>Statut</label><select id="scenarioStatus"><option>brouillon</option><option>a verifier</option><option>presente</option><option>retenu</option><option>refuse</option></select></div>
+        <div><label>Date de création</label><input id="scenarioDate" type="date" /></div>
+        <div><label>Statut</label><select id="scenarioStatus"><option>brouillon</option><option>à vérifier</option><option>présenté</option><option>retenu</option><option>refusé</option></select></div>
         <textarea id="scenarioGoal" placeholder="Objectif"></textarea>
         <textarea id="scenarioComment" placeholder="Commentaire"></textarea>
       </div>
-      <div class="notice">Sauvegarde locale sur ce navigateur. Pour partager officiellement, utiliser l'export ou prevoir une sauvegarde Google Sheet.</div>
+      <div id="scenarioWorkStatus" class="notice"></div>
+      <div class="notice">Sauvegarde locale sur ce navigateur. Pour partager officiellement, utiliser l’export ou prévoir une sauvegarde Google Sheet.</div>
       <div id="longProposalCards"></div>
-      <h2>Recapitulatif scenarios</h2>
+      <h2>Récapitulatif scénarios</h2>
       <div id="scenarioRecap" class="scenarioRecap"></div>
     </section>
 
     <section class="card section" id="propositionsClub" style="display:none">
       <h2>Planning actuel / demandes</h2>
-      <div class="notice">Planning actuel : photographie issue de la base mairie et demandes chargees depuis le Google Sheet.</div>
+      <div class="notice">Planning actuel : photographie issue de la base mairie et demandes chargées depuis le Google Sheet.</div>
       <div id="currentBaseList" class="currentBaseList"></div>
     </section>
 
     <section class="card section" id="gymnases" style="display:none">
-      <h2>Synthese / impression</h2>
-      <div class="notice">Vue rapide des equipements et boutons d'impression. Les scenarios disposent aussi de leur recapitulatif detaille dans l'onglet Scenarios.</div>
+      <h2>Synthèse / impression</h2>
+      <div class="notice">Vue rapide des équipements et boutons d’impression. Les scénarios disposent aussi de leur récapitulatif détaillé dans l’onglet Scénarios.</div>
       <div class="gymcards" id="gymCards"></div>
     </section>
   </main>
@@ -144,16 +177,16 @@
     <div class="formgrid">
       <input type="hidden" id="editId" />
       <div><label>Jour</label><select id="editJour"><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option><option>Dimanche</option></select></div>
-      <div><label>Equipement</label><select id="editGym"></select></div>
-      <div><label>Heure debut</label><input id="editDebut" /></div>
+      <div><label>Équipement</label><select id="editGym"></select></div>
+      <div><label>Heure début</label><input id="editDebut" /></div>
       <div><label>Heure fin</label><input id="editFin" /></div>
       <div><label>Association</label><select id="editClub"></select></div>
-      <div><label>Categorie</label><input id="editNature" /></div>
+      <div><label>Catégorie</label><input id="editNature" /></div>
       <textarea id="editGroupe" placeholder="Usage"></textarea>
-      <div><label>Statut de demande</label><select id="editRequestStatus"><option value="existant_a_conserver">Existant a conserver</option><option value="demande_en_plus">Demande en plus</option><option value="a_liberer">A liberer</option><option value="a_deplacer">A deplacer / echanger</option><option value="a_preciser">A preciser</option></select></div>
-      <div><label>Priorite</label><select id="editPriority"><option value="">A preciser</option><option value="vital">Vital</option><option value="important">Important</option><option value="confort">Confort</option><option value="negociable">Negociable</option></select></div>
+      <div><label>Statut de demande</label><select id="editRequestStatus"><option value="existant_a_conserver">Existant à conserver</option><option value="demande_en_plus">Demande en plus</option><option value="a_liberer">À libérer</option><option value="a_deplacer">À déplacer / échanger</option><option value="a_preciser">À préciser</option></select></div>
+      <div><label>Priorité</label><select id="editPriority"><option value="">À préciser</option><option value="vital">Vital</option><option value="important">Important</option><option value="confort">Confort</option><option value="negociable">Négociable</option></select></div>
       <textarea id="editNote" placeholder="Note"></textarea>
-      <textarea id="editReplaceSlot" placeholder="Remplace quel creneau / compensation eventuelle"></textarea>
+      <textarea id="editReplaceSlot" placeholder="Remplace quel créneau / compensation éventuelle"></textarea>
       <div><label>Statut</label><input id="editStatut" /></div>
       <div><label>Statut horaire</label><select id="editTimeStatus"><option>à vérifier</option><option>confirmé</option><option>corrigé</option></select></div>
       <textarea id="editClubNote" placeholder="Note club"></textarea>
