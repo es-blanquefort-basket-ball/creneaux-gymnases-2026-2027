@@ -29,6 +29,7 @@
         <button onclick="showTab('modifier', this)">Planning des demandes</button>
         <button onclick="showTab('parClub', this)">Par club</button>
         <button onclick="showTab('propositionsLongues', this)">Scénarios</button>
+        <button onclick="showTab('scenarioRetenu', this)">Scénario retenu</button>
       </div>
     </section>
 
@@ -143,6 +144,7 @@
         <button class="secondary" onclick="window.print()">Imprimer ce scénario</button>
         <button class="secondary" onclick="exportScenarioJSON()">Export JSON</button>
         <button class="secondary" onclick="copyScenarioSummary()">Copier résumé</button>
+        <button class="warn" onclick="publishActiveScenarioAsRetained()">Publier comme scénario retenu</button>
       </div>
       <div class="scenarioMeta formgrid">
         <div><label>Nom du scénario</label><input id="scenarioName" placeholder="Scénario 1 - base actuelle corrigée" /></div>
@@ -157,6 +159,43 @@
       <div id="longProposalCards"></div>
       <h2>Récapitulatif scénarios</h2>
       <div id="scenarioRecap" class="scenarioRecap"></div>
+    </section>
+
+    <section class="card section" id="scenarioRetenu">
+      <h2>Scénario retenu</h2>
+      <div class="notice">Lecture seule V15-A : scénario partagé depuis Google Sheet pour vérification par les clubs.</div>
+      <div id="retainedStatus" class="notice">Aucun scénario retenu chargé.</div>
+      <div class="planningFilters">
+        <label>Club
+          <select id="retainedClubFilter" onchange="renderScenarioRetenu()"></select>
+        </label>
+        <label>Catégorie
+          <select id="retainedCategoryFilter" onchange="renderScenarioRetenu()"></select>
+        </label>
+        <label>Équipement
+          <select id="retainedEquipmentFilter" onchange="renderScenarioRetenu()"></select>
+        </label>
+        <label>Jour
+          <select id="retainedDayFilter" onchange="renderScenarioRetenu()"></select>
+        </label>
+        <label>Statut
+          <select id="retainedStatusFilter" onchange="renderScenarioRetenu()"></select>
+        </label>
+        <label>Catégorie
+          <select id="retainedMissingCategoryFilter" onchange="renderScenarioRetenu()"><option value="all">Tous les créneaux</option><option value="missing">Créneaux sans catégorie</option></select>
+        </label>
+      </div>
+      <div class="toolbar">
+        <button onclick="loadScenarioRetenu()">Recharger le scénario retenu</button>
+        <button class="secondary" onclick="setRetainedView('planning')">Vue planning</button>
+        <button class="secondary" onclick="setRetainedView('club')">Vue par club</button>
+        <button class="secondary" onclick="setRetainedView('category')">Vue par catégorie</button>
+        <button class="secondary" onclick="window.print()">Imprimer</button>
+        <button class="secondary" onclick="exportRetainedJSON()">Export JSON</button>
+        <button class="secondary" onclick="exportRetainedCSV()">Export CSV</button>
+      </div>
+      <div id="retainedSummary" class="demandSummary"></div>
+      <div id="retainedContent"></div>
     </section>
 
     <section class="card section" id="propositionsClub" style="display:none">

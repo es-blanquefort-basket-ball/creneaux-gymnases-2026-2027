@@ -22,6 +22,13 @@ const REQUEST_STATUS = {
   a_deplacer: "À déplacer / échanger",
   a_preciser: "À préciser"
 };
+const RETAINED_SLOT_STATUS = {
+  retenu: "Retenu",
+  a_confirmer: "À confirmer",
+  a_corriger: "À corriger",
+  conflit: "Conflit",
+  en_attente_club: "En attente club"
+};
 const PLANNING_ALL_LIMIT = 80;
 const PRIORITY_LABELS = {
   vital: "Vital",
@@ -98,6 +105,9 @@ let selected = [];
 let canEdit = false;
 let slotMeta = loadLocalObject(LOCAL_SLOT_META_KEY, {});
 let clubProposals = loadLocalObject(LOCAL_CLUB_PROPOSALS_KEY, []);
+let retainedScenarioSlots = [];
+let retainedScenarioMeta = {};
+let retainedViewMode = "planning";
 
 function $(id) {
   return document.getElementById(id);
@@ -791,6 +801,7 @@ function renderActiveView() {
   if (id === "parClub") renderClubView();
   if (id === "propositionsClub") renderCurrentBaseView();
   if (id === "propositionsLongues") renderLongProposals();
+  if (id === "scenarioRetenu") renderScenarioRetenu();
   if (id === "viergeLong") renderLongDraftPlanning();
 }
 
@@ -1201,6 +1212,247 @@ function exportScenarioJSON(id = activeScenario) {
   const payload = scenarioPayload(id);
   const label = payload.scenario_nom || `scenario-${id}`;
   downloadTextFile(`${safeFilename(label)}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+}
+
+function retainedStatusLabel(value) {
+  return RETAINED_SLOT_STATUS[value] || value || "Retenu";
+}
+
+function retainedStatusClass(value) {
+  return "retained-" + normalizeText(value || "retenu").replace(/[^a-z0-9]+/g, "-");
+}
+
+function retainedCategoryValue(row) {
+  const value = String(row.categorie || "").trim();
+  return value || "Catégorie à préciser";
+}
+
+function retainedHasMissingCategory(row) {
+  return !String(row.categorie || "").trim();
+}
+
+function scenarioRowForSheet(s) {
+  return {
+    id: s[0] || "",
+    creneau_id: s[0] || "",
+    club: s[6] || "",
+    categorie: categoryValue(s) || "",
+    usage: usageLabel(s) === "à préciser" ? "" : usageLabel(s),
+    jour: s[2] || "",
+    equipement: normalizeEquipment(s[3]),
+    heure_debut: s[4] || "",
+    heure_fin: s[5] || "",
+    statut_creneau: "retenu",
+    note: displayNote(s),
+    origine: s[1] || "scenario",
+    modifie_par: ensureScenarioMeta(activeScenario).author || "",
+    modifie_le: new Date().toISOString()
+  };
+}
+
+function activeScenarioSheetPayload() {
+  saveScenarioMeta(activeScenario);
+  const meta = ensureScenarioMeta(activeScenario);
+  const rows = (scenarios[activeScenario] || []).map(scenarioRowForSheet);
+  return {
+    scenario: {
+      scenario_id: String(activeScenario),
+      nom: meta.name || scenarioLabel(activeScenario),
+      auteur: meta.author || "",
+      date_creation: meta.date || todayISO(),
+      date_modification: new Date().toISOString(),
+      statut: "retenu",
+      commentaire: [meta.goal, meta.comment].filter(Boolean).join(" - ")
+    },
+    rows
+  };
+}
+
+async function postToSheet(action, payload) {
+  await fetch(CONFIG.API_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action, ...payload })
+  });
+}
+
+async function publishActiveScenarioAsRetained() {
+  ensureScenarioList();
+  const payload = activeScenarioSheetPayload();
+  if (!payload.rows.length) return toast("Aucun créneau à publier dans ce scénario.");
+  const name = payload.scenario.nom || scenarioLabel(activeScenario);
+  if (!confirm(`Publier "${name}" comme scénario retenu partagé ? Cela remplacera l'onglet APP_SCENARIO_RETENU.`)) return;
+
+  try {
+    await postToSheet("publishScenarioAsRetenu", payload);
+    retainedScenarioMeta = payload.scenario;
+    toast("Publication envoyée vers Google Sheet");
+    setTimeout(loadScenarioRetenu, 1800);
+    showTab("scenarioRetenu", Array.from(document.querySelectorAll(".tabs button")).find(b => b.textContent.includes("retenu")));
+  } catch (e) {
+    toast("Publication impossible : " + e.message);
+  }
+}
+
+async function loadScenariosFromSheet() {
+  const data = await loadJSONP(CONFIG.API_URL + (CONFIG.API_URL.includes("?") ? "&" : "?") + "action=loadScenariosFromSheet");
+  return data.scenarios || [];
+}
+
+async function loadScenarioRetenu() {
+  const status = $("retainedStatus");
+  if (status) status.textContent = "Chargement du scénario retenu...";
+  try {
+    const data = await loadJSONP(CONFIG.API_URL + (CONFIG.API_URL.includes("?") ? "&" : "?") + "action=loadScenarioRetenu");
+    retainedScenarioSlots = (data.scenario_retenu || []).map(row => ({
+      creneau_id: row.creneau_id || "",
+      club: row.club || "",
+      categorie: row.categorie || "",
+      usage: row.usage || "",
+      jour: row.jour || "",
+      equipement: normalizeEquipment(row.equipement || ""),
+      heure_debut: row.heure_debut || "",
+      heure_fin: row.heure_fin || "",
+      statut_creneau: row.statut_creneau || "retenu",
+      note: row.note || "",
+      modifie_par: row.modifie_par || "",
+      modifie_le: row.modifie_le || ""
+    }));
+    retainedScenarioMeta = (data.scenarios || []).find(s => s.statut === "retenu") || retainedScenarioMeta || {};
+    renderScenarioRetenu();
+    toast("Scénario retenu chargé");
+  } catch (e) {
+    if (status) status.textContent = "Erreur de chargement du scénario retenu : " + e.message;
+  }
+}
+
+function retainedFilterValue(id, fallback = "Tous") {
+  return $(id)?.value || fallback;
+}
+
+function renderRetainedFilters() {
+  const rows = retainedScenarioSlots;
+  const clubs = Array.from(new Set(rows.map(r => r.club || "Sans club"))).sort();
+  const categories = Array.from(new Set(rows.map(retainedCategoryValue))).sort();
+  const equipments = Array.from(new Set(rows.map(r => normalizeEquipment(r.equipement)).filter(Boolean))).sort();
+  const statuses = Array.from(new Set(rows.map(r => r.statut_creneau || "retenu"))).sort();
+
+  setSelectOptions($("retainedClubFilter"), [{ value: "Tous", label: "Tous les clubs" }].concat(clubs.map(value => ({ value, label: value }))), retainedFilterValue("retainedClubFilter"));
+  setSelectOptions($("retainedCategoryFilter"), [{ value: "Tous", label: "Toutes les catégories" }].concat(categories.map(value => ({ value, label: value }))), retainedFilterValue("retainedCategoryFilter"));
+  setSelectOptions($("retainedEquipmentFilter"), [{ value: "Tous", label: "Tous les équipements" }].concat(equipments.map(value => ({ value, label: value }))), retainedFilterValue("retainedEquipmentFilter"));
+  setSelectOptions($("retainedDayFilter"), [{ value: "Tous", label: "Tous les jours" }].concat(DAYS.map(value => ({ value, label: value }))), retainedFilterValue("retainedDayFilter"));
+  setSelectOptions($("retainedStatusFilter"), [{ value: "Tous", label: "Tous les statuts" }].concat(statuses.map(value => ({ value, label: retainedStatusLabel(value) }))), retainedFilterValue("retainedStatusFilter"));
+}
+
+function retainedFilteredRows() {
+  renderRetainedFilters();
+  const club = retainedFilterValue("retainedClubFilter");
+  const category = retainedFilterValue("retainedCategoryFilter");
+  const equipment = retainedFilterValue("retainedEquipmentFilter");
+  const day = retainedFilterValue("retainedDayFilter");
+  const status = retainedFilterValue("retainedStatusFilter");
+  const missing = retainedFilterValue("retainedMissingCategoryFilter", "all");
+
+  return retainedScenarioSlots.filter(row => {
+    if (club !== "Tous" && (row.club || "Sans club") !== club) return false;
+    if (category !== "Tous" && retainedCategoryValue(row) !== category) return false;
+    if (equipment !== "Tous" && normalizeEquipment(row.equipement) !== equipment) return false;
+    if (day !== "Tous" && row.jour !== day) return false;
+    if (status !== "Tous" && row.statut_creneau !== status) return false;
+    if (missing === "missing" && !retainedHasMissingCategory(row)) return false;
+    return true;
+  });
+}
+
+function setRetainedView(mode) {
+  retainedViewMode = mode;
+  renderScenarioRetenu();
+}
+
+function retainedDurationHours(row) {
+  return Math.max(0, minutes(row.heure_fin) - minutes(row.heure_debut)) / 60;
+}
+
+function renderScenarioRetenu() {
+  const content = $("retainedContent");
+  if (!content) return;
+  if (!retainedScenarioSlots.length) {
+    renderRetainedFilters();
+    $("retainedSummary").innerHTML = "";
+    $("retainedStatus").textContent = "Aucun scénario retenu chargé. Publie un scénario depuis l'onglet Scénarios ou clique sur Recharger.";
+    content.innerHTML = '<div class="emptyClub">Aucun scénario retenu disponible pour le moment.</div>';
+    return;
+  }
+
+  const rows = retainedFilteredRows();
+  const totalHours = rows.reduce((sum, row) => sum + retainedDurationHours(row), 0);
+  const missingCategories = rows.filter(retainedHasMissingCategory).length;
+  $("retainedStatus").textContent = `Scénario retenu : ${retainedScenarioSlots.length} créneau(x) chargé(s). Vue filtrée : ${rows.length} créneau(x).`;
+  $("retainedSummary").innerHTML = [
+    ["Créneaux affichés", rows.length],
+    ["Heures affichées", formatHours(totalHours)],
+    ["Sans catégorie", missingCategories],
+    ["Vue", retainedViewMode === "planning" ? "Planning" : retainedViewMode === "club" ? "Par club" : "Par catégorie"]
+  ].map(([label, value]) => `<div class="summaryPill"><b>${escapeHTML(label)}</b><span>${escapeHTML(value)}</span></div>`).join("");
+
+  if (retainedViewMode === "club") {
+    content.innerHTML = renderRetainedGrouped(rows, row => row.club || "Sans club");
+  } else if (retainedViewMode === "category") {
+    content.innerHTML = renderRetainedGrouped(rows, retainedCategoryValue);
+  } else {
+    content.innerHTML = renderRetainedPlanning(rows);
+  }
+}
+
+function renderRetainedGrouped(rows, groupForRow) {
+  const groups = Array.from(new Set(rows.map(groupForRow))).sort();
+  if (!groups.length) return '<div class="emptyClub">Aucun créneau avec ces filtres.</div>';
+  return `<div class="retainedGroups">${groups.map(group => {
+    const list = rows.filter(row => groupForRow(row) === group)
+      .sort((a, b) => DAYS.indexOf(a.jour) - DAYS.indexOf(b.jour) || normalizeEquipment(a.equipement).localeCompare(normalizeEquipment(b.equipement)) || minutes(a.heure_debut) - minutes(b.heure_debut));
+    return `<section class="clubGroup"><div class="clubGroupHead"><h3>${escapeHTML(group)}</h3><span>${formatHours(list.reduce((sum, row) => sum + retainedDurationHours(row), 0))}</span></div><div class="clubSlotsGrid">${list.map(renderRetainedCard).join("")}</div></section>`;
+  }).join("")}</div>`;
+}
+
+function renderRetainedCard(row) {
+  const missing = retainedHasMissingCategory(row) ? '<span class="conflictBadge">Catégorie à préciser</span>' : "";
+  return `<article class="clubSlot compact ${clubClass(row.club)} ${retainedStatusClass(row.statut_creneau)}"><div class="clubSlotHead"><strong>${escapeHTML(row.club || "Sans club")}</strong><span>${escapeHTML(row.heure_debut)}-${escapeHTML(row.heure_fin)}</span></div><div class="clubMiniLine"><b>Catégorie</b><span>${escapeHTML(retainedCategoryValue(row))}</span></div><div class="clubMiniLine"><b>Usage</b><span>${escapeHTML(row.usage || "-")}</span></div><div class="clubMiniLine"><b>Équipement</b><span>${escapeHTML(normalizeEquipment(row.equipement))}</span></div><div class="clubMiniLine"><b>Jour</b><span>${escapeHTML(row.jour)}</span></div><div class="slotBadges"><span class="requestBadge ${retainedStatusClass(row.statut_creneau)}">${escapeHTML(retainedStatusLabel(row.statut_creneau))}</span>${missing}</div>${row.note ? `<div class="clubMiniLine"><b>Note</b><span>${escapeHTML(shortText(row.note, 70))}</span></div>` : ""}</article>`;
+}
+
+function renderRetainedPlanning(rows) {
+  if (!rows.length) return '<div class="emptyClub">Aucun créneau avec ces filtres.</div>';
+  const times = longPlanningTimeLines(rows, row => row.heure_debut, row => row.heure_fin);
+  const first = minutes(times[0]);
+  const last = minutes(times[times.length - 1]);
+  const rowCount = times.length - 1;
+  const gyms = Array.from(new Set(rows.map(row => normalizeEquipment(row.equipement)).filter(Boolean))).sort();
+
+  return gyms.map(gym => {
+    const blocks = rows.filter(row => normalizeEquipment(row.equipement) === gym).map(row => {
+      const start = minutes(row.heure_debut);
+      const end = minutes(row.heure_fin);
+      const startLine = Math.round((Math.max(start, first) - first) / 30) + 2;
+      const endLine = Math.round((Math.min(end, last) - first) / 30) + 2;
+      const dayIndex = LONG_DAYS.indexOf(row.jour);
+      if (dayIndex < 0 || end <= first || start >= last || endLine <= startLine) return "";
+      const missing = retainedHasMissingCategory(row) ? '<span>Catégorie à préciser</span>' : "";
+      return `<div class="meetingBlock slot ${clubClass(row.club)} ${retainedStatusClass(row.statut_creneau)}" style="grid-column:${dayIndex + 2};grid-row:${startLine}/${endLine}"><strong>${escapeHTML(row.club || "Sans club")}</strong><span>${escapeHTML(row.heure_debut)}-${escapeHTML(row.heure_fin)}</span><span>${escapeHTML(retainedCategoryValue(row))}</span><span>${escapeHTML(retainedStatusLabel(row.statut_creneau))}</span>${missing}</div>`;
+    }).join("");
+    return `<section class="meetingGym"><div class="meetingGymHead"><h3>${escapeHTML(gym)}</h3><span>Scénario retenu - lecture seule</span></div><div class="meetingGrid" style="--row-count:${rowCount}">${meetingGridChrome(times)}${blocks}</div></section>`;
+  }).join("");
+}
+
+function exportRetainedJSON() {
+  downloadTextFile("scenario-retenu.json", JSON.stringify({ meta: retainedScenarioMeta, creneaux: retainedScenarioSlots }, null, 2), "application/json;charset=utf-8");
+}
+
+function exportRetainedCSV() {
+  const header = ["creneau_id","club","categorie","usage","jour","equipement","heure_debut","heure_fin","statut_creneau","note","modifie_par","modifie_le"];
+  const csv = [header, ...retainedScenarioSlots.map(row => header.map(key => row[key] || ""))]
+    .map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(","))
+    .join("\n");
+  downloadTextFile("scenario-retenu.csv", csv, "text/csv;charset=utf-8");
 }
 
 function durationHours(s) {
