@@ -213,7 +213,8 @@ async function reloadFromSheet() {
   try {
     const data = await loadJSONP(CONFIG.API_URL + (CONFIG.API_URL.includes("?") ? "&" : "?") + "action=data");
     slots = (data.creneaux || []).map(rowToArray);
-    workingSlots = initWorkingSlots(slots);
+    const savedWorkingSlots = loadLocalObject(LOCAL_WORKING_SLOTS_KEY, []);
+    workingSlots = savedWorkingSlots.length ? savedWorkingSlots : initWorkingSlots(slots);
     proposals = data.propositions || [];
     selected = [];
     renderAll();
