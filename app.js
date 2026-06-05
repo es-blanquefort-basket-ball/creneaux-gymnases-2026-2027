@@ -1506,7 +1506,15 @@ function scenarioRowForSheet(s) {
 function activeScenarioSheetPayload() {
   saveScenarioMeta(activeScenario);
   const meta = ensureScenarioMeta(activeScenario);
-  const rows = (scenarios[activeScenario] || []).map(scenarioRowForSheet);
+  const seenIds = {};
+  const rows = (scenarios[activeScenario] || []).map((s, index) => {
+    const row = scenarioRowForSheet(s);
+    const baseId = row.creneau_id || `scenario-${activeScenario}-${index + 1}`;
+    seenIds[baseId] = (seenIds[baseId] || 0) + 1;
+    row.creneau_id = seenIds[baseId] > 1 ? `${baseId}-${seenIds[baseId]}` : baseId;
+    row.id = row.creneau_id;
+    return row;
+  });
   return {
     scenario: {
       scenario_id: String(activeScenario),
@@ -1675,6 +1683,34 @@ function retainedDurationHours(row) {
   return Math.max(0, minutes(row.heure_fin) - minutes(row.heure_debut)) / 60;
 }
 
+function retainedOverlapLayout(items) {
+  const layouts = {};
+  LONG_DAYS.forEach(day => {
+    const dayItems = items
+      .filter(item => item.row.jour === day)
+      .sort((a, b) => minutes(a.row.heure_debut) - minutes(b.row.heure_debut) || minutes(a.row.heure_fin) - minutes(b.row.heure_fin));
+    const lanes = [];
+    dayItems.forEach(item => {
+      const start = minutes(item.row.heure_debut);
+      const end = minutes(item.row.heure_fin);
+      let lane = lanes.findIndex(lastEnd => lastEnd <= start);
+      if (lane < 0) {
+        lane = lanes.length;
+        lanes.push(end);
+      } else {
+        lanes[lane] = end;
+      }
+      layouts[item.index] = { lane, count: 1 };
+    });
+    dayItems.forEach(item => {
+      const start = minutes(item.row.heure_debut);
+      const end = minutes(item.row.heure_fin);
+      const overlapping = dayItems.filter(other => minutes(other.row.heure_debut) < end && minutes(other.row.heure_fin) > start);
+      layouts[item.index].count = Math.max(...overlapping.map(other => (layouts[other.index]?.lane ?? 0) + 1), 1);
+    });
+  });
+  return layouts;
+}
 function renderScenarioRetenu() {
   const content = $("retainedContent");
   if (!content) return;
@@ -1747,20 +1783,26 @@ function renderRetainedPlanning(rows) {
   const gyms = Array.from(new Set(rows.map(row => normalizeEquipment(row.equipement)).filter(Boolean))).sort();
 
   return gyms.map(gym => {
-    const blocks = rows.filter(row => normalizeEquipment(row.equipement) === gym).map(row => {
+    const gymItems = rows
+      .map((row, index) => ({ row, index }))
+      .filter(item => normalizeEquipment(item.row.equipement) === gym);
+    const layouts = retainedOverlapLayout(gymItems);
+    const blocks = gymItems.map(item => {
+      const row = item.row;
       const start = minutes(row.heure_debut);
       const end = minutes(row.heure_fin);
       const startLine = Math.round((Math.max(start, first) - first) / 30) + 2;
       const endLine = Math.round((Math.min(end, last) - first) / 30) + 2;
       const dayIndex = LONG_DAYS.indexOf(row.jour);
       if (dayIndex < 0 || end <= first || start >= last || endLine <= startLine) return "";
+      const layout = layouts[item.index] || { lane: 0, count: 1 };
+      const overlapStyle = layout.count > 1 ? `width:calc(100% / ${layout.count});margin-left:calc(${layout.lane} * 100% / ${layout.count});` : "";
       const missing = retainedHasMissingCategory(row) ? '<span>Catégorie à préciser</span>' : "";
-      return `<div class="meetingBlock slot ${clubClass(row.club)} ${retainedStatusClass(row.statut_creneau)}" style="grid-column:${dayIndex + 2};grid-row:${startLine}/${endLine}"><strong>${escapeHTML(row.club || "Sans club")}</strong><span>${escapeHTML(row.heure_debut)}-${escapeHTML(row.heure_fin)}</span><span>${escapeHTML(retainedCategoryValue(row))}</span><span>${escapeHTML(retainedStatusLabel(row.statut_creneau))}</span>${missing}</div>`;
+      return `<div class="meetingBlock slot ${clubClass(row.club)} ${retainedStatusClass(row.statut_creneau)}" style="grid-column:${dayIndex + 2};grid-row:${startLine}/${endLine};${overlapStyle}"><strong>${escapeHTML(row.club || "Sans club")}</strong><span>${escapeHTML(row.heure_debut)}-${escapeHTML(row.heure_fin)}</span><span>${escapeHTML(retainedCategoryValue(row))}</span><span>${escapeHTML(retainedStatusLabel(row.statut_creneau))}</span>${missing}</div>`;
     }).join("");
     return `<section class="meetingGym"><div class="meetingGymHead"><h3>${escapeHTML(gym)}</h3><span>Scénario retenu - lecture seule</span></div><div class="meetingGrid" style="--row-count:${rowCount}">${meetingGridChrome(times)}${blocks}</div></section>`;
   }).join("");
 }
-
 function exportRetainedJSON() {
   downloadTextFile("scenario-retenu.json", JSON.stringify({ meta: retainedScenarioMeta, creneaux: retainedScenarioSlots }, null, 2), "application/json;charset=utf-8");
 }
@@ -2130,4 +2172,6 @@ function initApp() {
 }
 
 document.addEventListener("DOMContentLoaded", initApp);
+
+
 
