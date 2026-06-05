@@ -56,32 +56,28 @@
           <div class="kpi"><b id="categoryKpi">0</b><span>catégories renseignées</span></div>
         </div>
       </div>
-      <div class="notice">Horaires téléchargés depuis l’Excel mairie — base à confirmer par les associations.</div>
-      <div class="notice">Les données de départ proviennent de la base mairie / Google Sheet. Elles sont normalisées dans le Planning des demandes.</div>
+      <div class="notice miniNotice">Données de départ : base mairie / Google Sheet. Les horaires sont normalisés dans le Planning des demandes.</div>
       <section class="helpGuide">
-        <h2>Mode d’emploi clubs</h2>
-        <div class="notice">Ce support sert à préparer le travail sur les créneaux 2026-2027. Les données peuvent être corrigées ou complétées pour faciliter les échanges.</div>
+        <h2>Mode d’emploi express</h2>
+        <div class="notice">Objectif : vérifier les créneaux, corriger ce qui cloche, puis partager une version de travail claire.</div>
         <ol>
-          <li>Aller dans <b>Par club</b> pour vérifier les créneaux de son association.</li>
-          <li>Vérifier les horaires, équipements, catégories et usages.</li>
-          <li>Utiliser <b>Modifier</b> pour corriger une information.</li>
-          <li>Utiliser <b>Ajouter un créneau</b> si une demande manque.</li>
-          <li>Choisir le bon statut : <b>Existant à conserver</b>, <b>Demande en plus</b>, <b>À libérer</b>, <b>À déplacer / échanger</b> ou <b>À préciser</b>.</li>
-          <li>Utiliser <b>Scénarios</b> pour proposer une version de travail, depuis le Planning des demandes ou depuis un scénario vide.</li>
-          <li>Donner un nom clair au scénario, indiquer l’auteur / club et l’objectif.</li>
-          <li>Enregistrer le scénario localement.</li>
-          <li>Utiliser <b>Exporter le scénario</b> pour garder une copie, puis <b>Importer un scénario</b> pour la récupérer si besoin.</li>
-          <li>Imprimer ou exporter si besoin.</li>
-          <li>Signaler simplement si quelque chose ne fonctionne pas ou si un créneau manque.</li>
+          <li><b>Par club</b> : vérifier ses créneaux dans le Planning des demandes ou dans le Scénario retenu.</li>
+          <li><b>Modifier</b> : corriger horaire, équipement, catégorie ou usage.</li>
+          <li><b>Ajouter un créneau</b> : signaler une demande manquante.</li>
+          <li><b>Scénarios</b> : construire une version de travail, la nommer, indiquer l’auteur et la date.</li>
+          <li><b>Exporter le scénario</b> : garder une copie de sécurité.</li>
+          <li><b>Importer un scénario</b> : récupérer une copie perdue ou reçue.</li>
+          <li><b>Publier comme scénario retenu</b> : envoyer la version partagée dans Google Sheet.</li>
+          <li><b>Scénario retenu</b> : consulter la version courante et les anciennes versions publiées.</li>
         </ol>
-        <div class="notice">Les scénarios sont sauvegardés localement dans le navigateur. Pour transmettre une proposition, utilisez l’impression, Exporter le scénario ou envoyez une capture / PDF.</div>
+        <div class="notice miniNotice">Les scénarios locaux restent dans ce navigateur. Pour partager avec tout le monde, il faut publier comme scénario retenu.</div>
       </section>
       <div id="syncStatus" class="notice">Chargement...</div>
     </section>
 
     <section class="card section" id="modifier">
       <h2>Planning des demandes</h2>
-      <div class="notice">Horaires téléchargés depuis l’Excel mairie — base à confirmer par les associations.</div>
+      <div class="notice miniNotice">Base mairie / Google Sheet, ajustable avant validation.</div>
       <div class="notice">Planning de travail : version modifiable pour préparer 2026-2027.</div>
       <div class="notice">Espace de travail pour conserver, demander en plus, libérer, déplacer ou préciser les créneaux avant validation collective.</div>
       <div class="notice">Ce planning regroupe les demandes des associations pour préparer 2026-2027. Il ne vaut pas validation mairie.</div>
@@ -139,10 +135,8 @@
 
     <section class="card section" id="propositionsLongues">
       <h2>Scénarios</h2>
-      <div class="notice">Propositions de scénarios à vérifier en réunion - non validées.</div>
-      <div class="notice">Ces scénarios sont des plannings de travail non validés, destinés à tester des répartitions possibles.</div>
-      <div class="notice">Les scénarios sont sauvegardés localement sur ce navigateur. Pour les partager, utiliser l’impression/export ou prévoir une sauvegarde Google Sheet dans une version suivante.</div>
-      <div class="notice">Cet espace est un espace de travail. Les créneaux peuvent être ajoutés, modifiés ou supprimés sans modifier la base mairie.</div>
+      <div class="notice">Espace de travail : créer, importer, ajuster puis publier une version retenue.</div>
+      <div class="notice miniNotice">Les scénarios de cette page sont locaux au navigateur. La version partagée est celle publiée dans Scénario retenu.</div>
       <div class="toolbar">
         <select id="scenarioSelect" onchange="selectScenario(this.value)"></select>
         <select id="newScenarioSource"><option value="current">Depuis Planning des demandes</option><option value="blank">Scénario vide</option><option value="duplicate">Dupliquer le scénario affiché</option></select>

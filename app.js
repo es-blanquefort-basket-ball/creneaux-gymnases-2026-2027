@@ -1620,11 +1620,15 @@ function renderRetainedHistory() {
   const rows = retainedScenarioHistory
     .slice()
     .sort((a, b) => String(b.date_modification || b.date_creation || "").localeCompare(String(a.date_modification || a.date_creation || "")));
-  return rows.map(row => {
+  return `<div class="retainedHistoryTitle">Historique des scénarios publiés</div><div class="retainedHistoryList">${rows.map(row => {
     const id = String(row.scenario_id || "");
     const isDisplayed = id && id === String(retainedScenarioMeta.scenario_id || "");
-    return `<article class="scenarioCard retainedHistoryCard"><div class="proposalHead"><strong>${escapeHTML(row.nom || "Scénario sans nom")}</strong><span class="priority">${escapeHTML(row.statut || "-")}</span></div><p><b>Auteur</b><br>${escapeHTML(row.auteur || "-")}</p><p><b>Créé</b><br>${escapeHTML(row.date_creation || "-")}</p><p><b>Modifié</b><br>${escapeHTML(row.date_modification || "-")}</p><p><b>Commentaire</b><br>${escapeHTML(row.commentaire || "-")}</p><div class="slotActions"><button class="slotAction" onclick="loadRetainedHistoryScenario('${escapeHTML(id)}')">${isDisplayed ? "Version affichée" : "Afficher cette version"}</button></div></article>`;
-  }).join("");
+    const statusKey = normalizeText(row.statut || "");
+    const archived = statusKey.includes("archiv") || statusKey.includes("refus") || statusKey.includes("supprim");
+    const cardClass = isDisplayed ? "current" : archived ? "archived" : "past";
+    const modified = row.date_modification || row.date_creation || "-";
+    return `<article class="retainedHistoryCard ${cardClass}"><div class="retainedHistoryHead"><strong>${escapeHTML(shortText(row.nom || "Scénario sans nom", 42))}</strong><span>${escapeHTML(row.statut || "-")}</span></div><div class="retainedHistoryMeta"><b>Auteur</b> ${escapeHTML(row.auteur || "-")}</div><div class="retainedHistoryMeta"><b>Modifié</b> ${escapeHTML(modified)}</div>${row.commentaire ? `<div class="retainedHistoryMeta">${escapeHTML(shortText(row.commentaire, 70))}</div>` : ""}<button class="slotAction ${isDisplayed ? "currentAction" : ""}" onclick="loadRetainedHistoryScenario('${escapeHTML(id)}')">${isDisplayed ? "Version affichée" : "Afficher"}</button></article>`;
+  }).join("")}</div>`;
 }
 
 function renderRetainedGrouped(rows, groupForRow) {
@@ -1902,7 +1906,9 @@ function renderRetainedClubSource(container) {
     return;
   }
 
-  container.innerHTML = groups.map(group => {
+  const meta = retainedScenarioMeta || {};
+  const sourceSummary = `<div class="notice miniNotice retainedClubSource"><b>Scénario retenu chargé</b> : ${escapeHTML(meta.nom || meta.name || "Version courante")} | <b>Auteur</b> : ${escapeHTML(meta.auteur || meta.author || "-")} | <b>Modifié</b> : ${escapeHTML(meta.date_modification || meta.date || "-")} | <b>Statut</b> : ${escapeHTML(meta.statut || meta.status || "retenu")}</div>`;
+  container.innerHTML = sourceSummary + groups.map(group => {
     const list = retainedScenarioSlots
       .filter(row => retainedClubGroup(row) === group)
       .sort((a, b) => DAYS.indexOf(a.jour) - DAYS.indexOf(b.jour) || normalizeEquipment(a.equipement).localeCompare(normalizeEquipment(b.equipement)) || minutes(a.heure_debut) - minutes(b.heure_debut));
