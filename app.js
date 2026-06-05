@@ -107,6 +107,7 @@ let slotMeta = loadLocalObject(LOCAL_SLOT_META_KEY, {});
 let clubProposals = loadLocalObject(LOCAL_CLUB_PROPOSALS_KEY, []);
 let retainedScenarioSlots = [];
 let retainedScenarioMeta = {};
+let retainedScenarioHistory = [];
 let retainedViewMode = "planning";
 
 function $(id) {
@@ -924,11 +925,19 @@ function openEdit(id, type = "work", scenario = activeScenario) {
   const s = getListForContext(editContext).find(x => x[0] === id);
   if (!s) return;
   fillEditDrawer(s);
-  $("drawer").classList.add("show");
+  const drawer = $("drawer");
+  if (drawer) {
+    drawer.classList.toggle("compactScenario", type === "scenario");
+    drawer.classList.add("show");
+  }
+  if ($("drawerTitle")) $("drawerTitle").textContent = type === "scenario" ? "Modifier le créneau du scénario" : "Modifier / confirmer";
 }
 
 function closeDrawer() {
-  $("drawer")?.classList.remove("show");
+  const drawer = $("drawer");
+  if (!drawer) return;
+  drawer.classList.remove("show");
+  drawer.classList.remove("compactScenario");
 }
 
 function saveEdit() {
@@ -1450,26 +1459,33 @@ async function loadScenariosFromSheet() {
   return data.scenarios || [];
 }
 
+function retainedSlotFromSheetRow(row) {
+  return {
+    creneau_id: row.creneau_id || "",
+    club: row.club || "",
+    categorie: row.categorie || "",
+    usage: row.usage || "",
+    jour: row.jour || "",
+    equipement: normalizeEquipment(row.equipement || ""),
+    heure_debut: row.heure_debut || "",
+    heure_fin: row.heure_fin || "",
+    statut_creneau: row.statut_creneau || "retenu",
+    note: row.note || "",
+    modifie_par: row.modifie_par || "",
+    modifie_le: row.modifie_le || ""
+  };
+}
+
 async function loadScenarioRetenu() {
   const status = $("retainedStatus");
   if (status) status.textContent = "Chargement du scénario retenu...";
   try {
     const data = await loadJSONP(CONFIG.API_URL + (CONFIG.API_URL.includes("?") ? "&" : "?") + "action=loadScenarioRetenu");
-    retainedScenarioSlots = (data.scenario_retenu || []).map(row => ({
-      creneau_id: row.creneau_id || "",
-      club: row.club || "",
-      categorie: row.categorie || "",
-      usage: row.usage || "",
-      jour: row.jour || "",
-      equipement: normalizeEquipment(row.equipement || ""),
-      heure_debut: row.heure_debut || "",
-      heure_fin: row.heure_fin || "",
-      statut_creneau: row.statut_creneau || "retenu",
-      note: row.note || "",
-      modifie_par: row.modifie_par || "",
-      modifie_le: row.modifie_le || ""
-    }));
-    retainedScenarioMeta = (data.scenarios || []).find(s => s.statut === "retenu") || retainedScenarioMeta || {};
+    retainedScenarioSlots = (data.scenario_retenu || []).map(retainedSlotFromSheetRow);
+    retainedScenarioHistory = data.scenarios || [];
+    retainedScenarioMeta = retainedScenarioHistory
+      .filter(s => s.statut === "retenu")
+      .sort((a, b) => String(b.date_modification || b.date_creation || "").localeCompare(String(a.date_modification || a.date_creation || "")))[0] || retainedScenarioMeta || {};
     if (activeSectionId() === "parClub") {
       renderClubView();
     } else {
@@ -1478,6 +1494,22 @@ async function loadScenarioRetenu() {
     toast("Scénario retenu chargé");
   } catch (e) {
     if (status) status.textContent = "Erreur de chargement du scénario retenu : " + e.message;
+  }
+}
+
+async function loadRetainedHistoryScenario(scenarioId) {
+  if (!scenarioId) return;
+  const status = $("retainedStatus");
+  if (status) status.textContent = "Chargement de l'ancienne version...";
+  try {
+    const data = await loadJSONP(CONFIG.API_URL + (CONFIG.API_URL.includes("?") ? "&" : "?") + "action=loadScenarioById&scenario_id=" + encodeURIComponent(scenarioId));
+    retainedScenarioSlots = (data.creneaux || []).map(retainedSlotFromSheetRow);
+    retainedScenarioMeta = data.scenario || {};
+    retainedViewMode = "planning";
+    renderScenarioRetenu();
+    toast("Ancienne version affichée");
+  } catch (e) {
+    if (status) status.textContent = "Erreur de chargement de l'historique : " + e.message;
   }
 }
 
@@ -1520,6 +1552,7 @@ function retainedFilteredRows() {
 }
 
 function setRetainedView(mode) {
+  if (mode === "category") mode = "club";
   retainedViewMode = mode;
   renderScenarioRetenu();
 }
@@ -1531,9 +1564,11 @@ function retainedDurationHours(row) {
 function renderScenarioRetenu() {
   const content = $("retainedContent");
   if (!content) return;
+  const history = $("retainedHistory");
   if (!retainedScenarioSlots.length) {
     renderRetainedFilters();
     $("retainedSummary").innerHTML = "";
+    if (history) history.innerHTML = renderRetainedHistory();
     $("retainedStatus").textContent = "Aucun scénario retenu chargé. Publie un scénario depuis l'onglet Scénarios ou clique sur Recharger.";
     content.innerHTML = '<div class="emptyClub">Aucun scénario retenu disponible pour le moment.</div>';
     return;
@@ -1547,16 +1582,27 @@ function renderScenarioRetenu() {
     ["Créneaux affichés", rows.length],
     ["Heures affichées", formatHours(totalHours)],
     ["Sans catégorie", missingCategories],
-    ["Vue", retainedViewMode === "planning" ? "Planning" : retainedViewMode === "club" ? "Par club" : "Par catégorie"]
+    ["Vue", retainedViewMode === "planning" ? "Planning" : "Par club"]
   ].map(([label, value]) => `<div class="summaryPill"><b>${escapeHTML(label)}</b><span>${escapeHTML(value)}</span></div>`).join("");
+  if (history) history.innerHTML = renderRetainedHistory();
 
   if (retainedViewMode === "club") {
     content.innerHTML = renderRetainedGrouped(rows, row => row.club || "Sans club");
-  } else if (retainedViewMode === "category") {
-    content.innerHTML = renderRetainedGrouped(rows, retainedCategoryValue);
   } else {
     content.innerHTML = renderRetainedPlanning(rows);
   }
+}
+
+function renderRetainedHistory() {
+  if (!retainedScenarioHistory.length) return '<div class="emptyClub">Historique des scénarios retenus non chargé.</div>';
+  const rows = retainedScenarioHistory
+    .slice()
+    .sort((a, b) => String(b.date_modification || b.date_creation || "").localeCompare(String(a.date_modification || a.date_creation || "")));
+  return rows.map(row => {
+    const id = String(row.scenario_id || "");
+    const isDisplayed = id && id === String(retainedScenarioMeta.scenario_id || "");
+    return `<article class="scenarioCard retainedHistoryCard"><div class="proposalHead"><strong>${escapeHTML(row.nom || "Scénario sans nom")}</strong><span class="priority">${escapeHTML(row.statut || "-")}</span></div><p><b>Auteur</b><br>${escapeHTML(row.auteur || "-")}</p><p><b>Créé</b><br>${escapeHTML(row.date_creation || "-")}</p><p><b>Modifié</b><br>${escapeHTML(row.date_modification || "-")}</p><p><b>Commentaire</b><br>${escapeHTML(row.commentaire || "-")}</p><div class="slotActions"><button class="slotAction" onclick="loadRetainedHistoryScenario('${escapeHTML(id)}')">${isDisplayed ? "Version affichée" : "Afficher cette version"}</button></div></article>`;
+  }).join("");
 }
 
 function renderRetainedGrouped(rows, groupForRow) {
@@ -1951,5 +1997,6 @@ function downloadTextFile(filename, content, type) {
 
 window.openScenarioJSONImport = openScenarioJSONImport;
 window.importScenarioJSONFile = importScenarioJSONFile;
+window.loadRetainedHistoryScenario = loadRetainedHistoryScenario;
 
 document.addEventListener("DOMContentLoaded", reloadFromSheet);

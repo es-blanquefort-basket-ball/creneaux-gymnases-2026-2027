@@ -193,7 +193,7 @@
         <label>Statut
           <select id="retainedStatusFilter" onchange="renderScenarioRetenu()"></select>
         </label>
-        <label>Catégorie
+        <label>Catégories à préciser
           <select id="retainedMissingCategoryFilter" onchange="renderScenarioRetenu()"><option value="all">Tous les créneaux</option><option value="missing">Créneaux sans catégorie</option></select>
         </label>
       </div>
@@ -201,12 +201,12 @@
         <button onclick="loadScenarioRetenu()">Recharger le scénario retenu</button>
         <button class="secondary" onclick="setRetainedView('planning')">Vue planning</button>
         <button class="secondary" onclick="setRetainedView('club')">Vue par club</button>
-        <button class="secondary" onclick="setRetainedView('category')">Vue par catégorie</button>
         <button class="secondary" onclick="window.print()">Imprimer</button>
         <button class="secondary" onclick="exportRetainedJSON()">Exporter le scénario retenu</button>
         <button class="secondary" onclick="exportRetainedCSV()">Export CSV</button>
       </div>
       <div id="retainedSummary" class="demandSummary"></div>
+      <div id="retainedHistory" class="scenarioRecap"></div>
       <div id="retainedContent"></div>
     </section>
 
@@ -224,7 +224,7 @@
   </main>
 
   <div class="drawer" id="drawer">
-    <h2>Modifier / confirmer</h2>
+    <h2 id="drawerTitle">Modifier / confirmer</h2>
     <div class="formgrid">
       <input type="hidden" id="editId" />
       <div><label>Jour</label><select id="editJour"><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option><option>Dimanche</option></select></div>
@@ -234,14 +234,14 @@
       <div><label>Association</label><select id="editClub"></select></div>
       <div><label>Catégorie</label><input id="editNature" /></div>
       <textarea id="editGroupe" placeholder="Usage"></textarea>
-      <div><label>Statut de demande</label><select id="editRequestStatus"><option value="existant_a_conserver">Existant à conserver</option><option value="demande_en_plus">Demande en plus</option><option value="a_liberer">À libérer</option><option value="a_deplacer">À déplacer / échanger</option><option value="a_preciser">À préciser</option></select></div>
-      <div><label>Priorité</label><select id="editPriority"><option value="">À préciser</option><option value="vital">Vital</option><option value="important">Important</option><option value="confort">Confort</option><option value="negociable">Négociable</option></select></div>
-      <textarea id="editNote" placeholder="Note"></textarea>
-      <textarea id="editReplaceSlot" placeholder="Remplace quel créneau / compensation éventuelle"></textarea>
-      <div><label>Statut</label><input id="editStatut" /></div>
-      <div><label>Statut horaire</label><select id="editTimeStatus"><option>à vérifier</option><option>confirmé</option><option>corrigé</option></select></div>
-      <textarea id="editClubNote" placeholder="Note club"></textarea>
-      <details class="sourceDetails">
+      <div class="drawerAdvanced"><label>Statut de demande</label><select id="editRequestStatus"><option value="existant_a_conserver">Existant à conserver</option><option value="demande_en_plus">Demande en plus</option><option value="a_liberer">À libérer</option><option value="a_deplacer">À déplacer / échanger</option><option value="a_preciser">À préciser</option></select></div>
+      <div class="drawerAdvanced"><label>Priorité</label><select id="editPriority"><option value="">À préciser</option><option value="vital">Vital</option><option value="important">Important</option><option value="confort">Confort</option><option value="negociable">Négociable</option></select></div>
+      <textarea class="drawerAdvanced" id="editNote" placeholder="Note"></textarea>
+      <textarea class="drawerAdvanced" id="editReplaceSlot" placeholder="Remplace quel créneau / compensation éventuelle"></textarea>
+      <div class="drawerAdvanced"><label>Statut</label><input id="editStatut" /></div>
+      <div class="drawerAdvanced"><label>Statut horaire</label><select id="editTimeStatus"><option>à vérifier</option><option>confirmé</option><option>corrigé</option></select></div>
+      <textarea class="drawerAdvanced" id="editClubNote" placeholder="Note club"></textarea>
+      <details class="sourceDetails drawerAdvanced">
         <summary>Detail source mairie</summary>
         <div class="formgrid">
           <div><label>Source mairie</label><input id="editSource" /></div>
@@ -250,7 +250,7 @@
         </div>
       </details>
     </div>
-    <div class="toolbar"><button onclick="applySuggestion()">Appliquer la suggestion</button><button onclick="saveEdit()">Enregistrer</button><button class="secondary" onclick="closeDrawer()">Fermer</button></div>
+    <div class="toolbar"><button class="drawerAdvanced" onclick="applySuggestion()">Appliquer la suggestion</button><button onclick="saveEdit()">Enregistrer</button><button class="secondary" onclick="closeDrawer()">Fermer</button></div>
   </div>
 
   <div class="toast" id="toast"></div>

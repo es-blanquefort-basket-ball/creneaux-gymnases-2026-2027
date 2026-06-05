@@ -48,6 +48,14 @@ function doGet(e) {
       scenario_retenu: readSheet_(SHEETS.SCENARIO_RETENU),
       scenarios: readSheet_(SHEETS.SCENARIOS)
     };
+  } else if (action === "loadscenariobyid") {
+    const scenarioId = String(e.parameter.scenario_id || "");
+    const scenarios = readSheet_(SHEETS.SCENARIOS);
+    payload = {
+      ok: true,
+      scenario: scenarios.find(row => String(row.scenario_id || "") === scenarioId) || {},
+      creneaux: readSheet_(SHEETS.SCENARIO_CRENEAUX).filter(row => String(row.scenario_id || "") === scenarioId)
+    };
   } else {
     payload = { ok: false, error: "Action inconnue" };
   }
