@@ -1,4 +1,4 @@
-const CONFIG = {
+﻿const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbz7wVlTcE_FTXb9e_PfjDEFw5vv-1DHx4WrfwxP3gE-H1Ssq70-hTg08JRK4W49shzXEg/exec",
   EDIT_CODE: "2026"
 };
@@ -870,8 +870,12 @@ function nextSlotId(list, prefix) {
   return prefix + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, "0");
 }
 
+function uniqueSlotId(prefix = "S") {
+  return prefix + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+}
+
 function addSlot() {
-  const nextId = nextSlotId(workingSlots, "W");
+  const nextId = uniqueSlotId("W");
   const gymFilter = $("planningGymFilter")?.value || "Fongravey";
   const dayFilter = $("planningDayFilter")?.value || "Mercredi";
   const gym = gymFilter && gymFilter !== "Tous" && gymFilter !== "Autres" ? gymFilter : "Fongravey";
@@ -882,7 +886,7 @@ function addSlot() {
   saveLocalObject(LOCAL_WORKING_SLOTS_KEY, workingSlots);
   selected = [nextId];
   renderAll();
-  openEdit(nextId, "work");
+  openEdit(nextId, "work", activeScenario, true);
 }
 
 function swapSelected() {
@@ -908,7 +912,7 @@ function deleteWorkSlot(id) {
     return;
   }
   if (!confirm("Supprimer ce créneau du planning de travail  La base mairie originale ne sera pas modifiée.")) return;
-  workingSlots = workingSlots.filter(s => s[0] !== id);
+  removeSlotByIdOnce(workingSlots, id);
   selected = selected.filter(x => x !== id);
   saveLocalObject(LOCAL_WORKING_SLOTS_KEY, workingSlots);
   renderAll();
@@ -932,6 +936,12 @@ function persistContext(context = editContext) {
   if (context.type === "blank") saveLocalObject(LOCAL_BLANK_SLOTS_KEY, blankSlots);
   if (context.type === "scenario") saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
   if (context.type === "work") saveLocalObject(LOCAL_WORKING_SLOTS_KEY, workingSlots);
+}
+
+function removeSlotByIdOnce(list, id) {
+  const index = list.findIndex(s => s[0] === id);
+  if (index >= 0) list.splice(index, 1);
+  return list;
 }
 
 function originalMairieSlot(id) {
@@ -964,8 +974,8 @@ function fillEditDrawer(s) {
   if (details) details.style.display = mairieSlot ? "" : "none";
 }
 
-function openEdit(id, type = "work", scenario = activeScenario) {
-  editContext = { type, id, scenario };
+function openEdit(id, type = "work", scenario = activeScenario, isNew = false) {
+  editContext = { type, id, scenario, isNew };
   const s = getListForContext(editContext).find(x => x[0] === id);
   if (!s) return;
   fillEditDrawer(s);
@@ -974,16 +984,43 @@ function openEdit(id, type = "work", scenario = activeScenario) {
     drawer.classList.toggle("compactScenario", type === "scenario");
     drawer.classList.add("show");
   }
-  if ($("drawerTitle")) $("drawerTitle").textContent = type === "scenario" ? "Modifier le créneau du scénario" : "Modifier / confirmer";
+  if ($("drawerTitle")) {
+    if (isNew && type === "scenario") $("drawerTitle").textContent = "Ajouter un créneau au scénario";
+    else if (isNew) $("drawerTitle").textContent = "Ajouter un créneau";
+    else $("drawerTitle").textContent = type === "scenario" ? "Modifier le créneau du scénario" : "Modifier / confirmer";
+  }
+}
+
+function discardNewEditIfNeeded() {
+  if (!editContext?.isNew || !editContext.id) return false;
+  const id = editContext.id;
+  if (editContext.type === "blank") {
+    removeSlotByIdOnce(blankSlots, id);
+    saveLocalObject(LOCAL_BLANK_SLOTS_KEY, blankSlots);
+  } else if (editContext.type === "scenario") {
+    const scenarioId = editContext.scenario || activeScenario;
+    scenarios[scenarioId] = scenarios[scenarioId] || [];
+    removeSlotByIdOnce(scenarios[scenarioId], id);
+    saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
+  } else if (editContext.type === "work") {
+    removeSlotByIdOnce(workingSlots, id);
+    selected = selected.filter(x => x !== id);
+    delete slotMeta[id];
+    saveLocalObject(LOCAL_WORKING_SLOTS_KEY, workingSlots);
+    saveLocalObject(LOCAL_SLOT_META_KEY, slotMeta);
+  }
+  editContext.isNew = false;
+  return true;
 }
 
 function closeDrawer() {
+  const discarded = discardNewEditIfNeeded();
   const drawer = $("drawer");
   if (!drawer) return;
   drawer.classList.remove("show");
   drawer.classList.remove("compactScenario");
+  if (discarded) renderAll();
 }
-
 function saveEdit() {
   const list = getListForContext();
   const s = list.find(x => x[0] === $("editId").value);
@@ -1000,6 +1037,7 @@ function saveEdit() {
   s[10] = $("editNote").value;
   saveSlotMetaFromDrawer(s);
   persistContext();
+  editContext.isNew = false;
   closeDrawer();
   renderAll();
   toast("Créneau mis à jour");
@@ -1078,8 +1116,8 @@ function renderLongDraftPlanning() {
 }
 
 function toEditableSlot(seed, prefix, list) {
-  const base = seed ? copySlot(seed) : [nextSlotId(list, prefix), "Saisie locale", "Lundi", "Fongravey", "17h00", "18h30", "Libre / a arbitrer", "", "", "À vérifier", ""];
-  base[0] = base[0] || nextSlotId(list, prefix);
+  const base = seed ? copySlot(seed) : [uniqueSlotId(prefix), "Saisie locale", "Lundi", "Fongravey", "17h00", "18h30", "Libre / a arbitrer", "", "", "À vérifier", ""];
+  base[0] = base[0] || uniqueSlotId(prefix);
   base[3] = normalizeEquipment(base[3]);
   base[4] = normalizeTimeForWork(base[4]);
   base[5] = normalizeTimeForWork(base[5]);
@@ -1091,7 +1129,7 @@ function addBlankSlot() {
   blankSlots.push(item);
   saveLocalObject(LOCAL_BLANK_SLOTS_KEY, blankSlots);
   renderAll();
-  openEdit(item[0], "blank");
+  openEdit(item[0], "blank", activeScenario, true);
 }
 
 function scenarioLabel(id) {
@@ -1211,11 +1249,11 @@ function createScenarioFromBlank() {
 function addScenarioSlot() {
   ensureScenarioList();
   if (!scenarios[activeScenario]) scenarios[activeScenario] = [];
-  const item = toEditableSlot(null, "SC" + activeScenario + "-", scenarios[activeScenario]);
+  const item = toEditableSlot(null, "SC", scenarios[activeScenario]);
   scenarios[activeScenario].push(item);
   saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
   renderAll();
-  openEdit(item[0], "scenario", activeScenario);
+  openEdit(item[0], "scenario", activeScenario, true);
 }
 
 function saveScenario() {
@@ -1812,10 +1850,11 @@ function renderScenarioRecap() {
 
 function deleteEditableSlot(id, type, scenario = activeScenario) {
   if (type === "blank") {
-    blankSlots = blankSlots.filter(s => s[0] !== id);
+    removeSlotByIdOnce(blankSlots, id);
     saveLocalObject(LOCAL_BLANK_SLOTS_KEY, blankSlots);
   } else if (type === "scenario") {
-    scenarios[scenario] = (scenarios[scenario] || []).filter(s => s[0] !== id);
+    scenarios[scenario] = scenarios[scenario] || [];
+    removeSlotByIdOnce(scenarios[scenario], id);
     saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
   }
   renderAll();
@@ -2091,3 +2130,4 @@ function initApp() {
 }
 
 document.addEventListener("DOMContentLoaded", initApp);
+
