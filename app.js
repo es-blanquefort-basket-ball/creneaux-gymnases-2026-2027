@@ -1470,7 +1470,11 @@ async function loadScenarioRetenu() {
       modifie_le: row.modifie_le || ""
     }));
     retainedScenarioMeta = (data.scenarios || []).find(s => s.statut === "retenu") || retainedScenarioMeta || {};
-    renderScenarioRetenu();
+    if (activeSectionId() === "parClub") {
+      renderClubView();
+    } else {
+      renderScenarioRetenu();
+    }
     toast("Scénario retenu chargé");
   } catch (e) {
     if (status) status.textContent = "Erreur de chargement du scénario retenu : " + e.message;
@@ -1785,6 +1789,12 @@ function clubGroup(association) {
 function renderClubView() {
   const container = $("clubView");
   if (!container) return;
+  const source = $("clubViewSource")?.value || "work";
+  if ($("clubAddSlotButton")) $("clubAddSlotButton").style.display = source === "retained" ? "none" : "";
+  if (source === "retained") {
+    renderRetainedClubSource(container);
+    return;
+  }
   const preferred = ["Basket", "Handball", "Volley", "Badminton", "Futsal", "Handi-basket / handisport", "Autres"];
   const groups = preferred.filter(group => workingSlots.some(s => clubGroup(s[6]) === group));
   if (!groups.length) {
@@ -1804,6 +1814,37 @@ function renderClubView() {
     }).join("") : '<div class="emptyClub">Aucun créneau chargé.</div>';
     const summary = `<div class="clubStats"><span>Total ${formatHours(metrics.total)}</span><span>Conserver ${formatHours(metrics.existant_a_conserver)}</span><span>En plus ${formatHours(metrics.demande_en_plus)}</span><span>Libérables ${formatHours(metrics.a_liberer)}</span><span>À déplacer ${formatHours(metrics.a_deplacer)}</span></div>`;
     return `<section class="clubGroup ${clubClass(group)}"><div class="clubGroupHead"><h3>${escapeHTML(group)}</h3><span>${formatHours(metrics.total)}</span></div>${summary}<div class="clubSlotsGrid">${rows}</div></section>`;
+  }).join("");
+}
+
+function retainedClubGroup(row) {
+  return clubGroup(row.club || "");
+}
+
+function renderRetainedClubSource(container) {
+  if (!retainedScenarioSlots.length) {
+    container.innerHTML = '<div class="emptyClub">Aucun scénario retenu chargé. Clique sur Recharger le scénario retenu pour afficher les créneaux validés par club.</div>';
+    return;
+  }
+
+  const preferred = ["Basket", "Handball", "Volley", "Badminton", "Futsal", "Handi-basket / handisport", "Autres"];
+  const groups = preferred.filter(group => retainedScenarioSlots.some(row => retainedClubGroup(row) === group));
+  if (!groups.length) {
+    container.innerHTML = '<div class="emptyClub">Aucun créneau dans le scénario retenu.</div>';
+    return;
+  }
+
+  container.innerHTML = groups.map(group => {
+    const list = retainedScenarioSlots
+      .filter(row => retainedClubGroup(row) === group)
+      .sort((a, b) => DAYS.indexOf(a.jour) - DAYS.indexOf(b.jour) || normalizeEquipment(a.equipement).localeCompare(normalizeEquipment(b.equipement)) || minutes(a.heure_debut) - minutes(b.heure_debut));
+    const total = list.reduce((sum, row) => sum + retainedDurationHours(row), 0);
+    const missingCategories = list.filter(retainedHasMissingCategory).length;
+    const statusSummary = Array.from(new Set(list.map(row => row.statut_creneau || "retenu")))
+      .map(status => `<span>${escapeHTML(retainedStatusLabel(status))}: ${list.filter(row => (row.statut_creneau || "retenu") === status).length}</span>`)
+      .join("");
+    const summary = `<div class="clubStats"><span>Total ${formatHours(total)}</span><span>${list.length} créneau(x)</span>${missingCategories ? `<span>${missingCategories} catégorie(s) à préciser</span>` : ""}${statusSummary}</div>`;
+    return `<section class="clubGroup ${clubClass(group)}"><div class="clubGroupHead"><h3>${escapeHTML(group)}</h3><span>Scénario retenu - ${formatHours(total)}</span></div>${summary}<div class="clubSlotsGrid">${list.map(renderRetainedCard).join("")}</div></section>`;
   }).join("");
 }
 

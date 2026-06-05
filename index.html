@@ -116,8 +116,17 @@
 
     <section class="card section" id="parClub">
       <h2>Par club</h2>
-      <div class="notice">Lecture par association des demandes 2026-2027. Chaque créneau peut être ouvert et modifié.</div>
-      <div class="toolbar"><button onclick="addSlot()">Ajouter un créneau</button></div>
+      <div class="notice">Lecture par association des demandes 2026-2027 ou du scénario retenu partagé.</div>
+      <div class="toolbar">
+        <label>Source affichée
+          <select id="clubViewSource" onchange="renderClubView()">
+            <option value="work">Planning des demandes</option>
+            <option value="retained">Scénario retenu</option>
+          </select>
+        </label>
+        <button id="clubAddSlotButton" onclick="addSlot()">Ajouter un créneau</button>
+        <button class="secondary" onclick="loadScenarioRetenu()">Recharger le scénario retenu</button>
+      </div>
       <div id="clubView" class="clubview"></div>
     </section>
 
