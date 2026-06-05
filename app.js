@@ -1215,7 +1215,10 @@ function exportScenarioJSON(id = activeScenario) {
 }
 
 function openScenarioJSONImport() {
-  $("scenarioJSONInput")?.click();
+  const input = $("scenarioJSONInput");
+  if (!input) return toast("Import impossible : bouton de fichier introuvable.");
+  input.value = "";
+  input.click();
 }
 
 function readImportField(row, names) {
@@ -1229,7 +1232,7 @@ function scenarioImportMeta(data) {
   const source = data.scenario && typeof data.scenario === "object" && !Array.isArray(data.scenario) ? data.scenario : data;
   return {
     importedId: String(readImportField(source, ["scenario_id", "id"]) || ""),
-    name: String(readImportField(source, ["scenario_nom", "nom", "name"]) || "Scénario importé JSON"),
+    name: String(readImportField(source, ["scenario_nom", "nom", "name"]) || "Scénario importé"),
     author: String(readImportField(source, ["scenario_auteur", "auteur", "author"]) || ""),
     date: String(readImportField(source, ["scenario_date", "date", "date_creation"]) || todayISO()),
     status: String(readImportField(source, ["scenario_statut", "statut", "status"]) || "brouillon"),
@@ -1326,10 +1329,10 @@ function importScenarioJSONData(data) {
 
   scenarios[id] = rows;
   scenarioMeta[id] = {
-    name: meta.name || "Scénario importé JSON",
+    name: meta.name || "Scénario importé",
     author: meta.author,
     date: meta.date || todayISO(),
-    goal: meta.importedId ? "Import JSON du scénario " + meta.importedId : "Import JSON",
+    goal: meta.importedId ? "Import du scénario " + meta.importedId : "Import de scénario",
     comment: meta.comment,
     status: meta.status || "brouillon"
   };
@@ -1338,7 +1341,7 @@ function importScenarioJSONData(data) {
   saveLocalObject(LOCAL_SCENARIO_META_KEY, scenarioMeta);
   saveLocalObject(LOCAL_SLOT_META_KEY, slotMeta);
   renderLongProposals();
-  toast(`Scénario JSON importé : ${rows.length} créneau(x).`);
+  toast(`Scénario importé : ${rows.length} créneau(x).`);
 }
 
 function importScenarioJSONFile(input) {
@@ -1673,7 +1676,7 @@ function renderScenarioRecap() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([club, value]) => `<span>${escapeHTML(club)}: ${value.toFixed(1)} h</span>`)
       .join("");
-    return `<article class="scenarioCard"><div class="proposalHead"><strong>${escapeHTML(scenarioLabel(id))}</strong><span class="priority">${escapeHTML(meta.status || "brouillon")}</span></div><p><b>Auteur</b><br>${escapeHTML(meta.author || "-")}</p><p><b>Total créneaux</b><br>${stats.rows.length}</p><p><b>Heures par club</b><br><span class="hoursList">${hours || "Aucune heure"}</span></p><p><b>Équipements</b><br>${escapeHTML(stats.equipments.join(", ") || "-")}</p><div class="slotActions"><button class="slotAction" onclick="openScenario('${id}')">Ouvrir</button><button class="slotAction" onclick="printScenario('${id}')">Imprimer ce scénario</button><button class="slotAction" onclick="exportScenarioJSON('${id}')">Export JSON</button></div></article>`;
+    return `<article class="scenarioCard"><div class="proposalHead"><strong>${escapeHTML(scenarioLabel(id))}</strong><span class="priority">${escapeHTML(meta.status || "brouillon")}</span></div><p><b>Auteur</b><br>${escapeHTML(meta.author || "-")}</p><p><b>Total créneaux</b><br>${stats.rows.length}</p><p><b>Heures par club</b><br><span class="hoursList">${hours || "Aucune heure"}</span></p><p><b>Équipements</b><br>${escapeHTML(stats.equipments.join(", ") || "-")}</p><div class="slotActions"><button class="slotAction" onclick="openScenario('${id}')">Ouvrir</button><button class="slotAction" onclick="printScenario('${id}')">Imprimer ce scénario</button><button class="slotAction" onclick="exportScenarioJSON('${id}')">Exporter le scénario</button></div></article>`;
   }).join("");
 }
 
@@ -1904,5 +1907,8 @@ function downloadTextFile(filename, content, type) {
   a.remove();
   URL.revokeObjectURL(a.href);
 }
+
+window.openScenarioJSONImport = openScenarioJSONImport;
+window.importScenarioJSONFile = importScenarioJSONFile;
 
 document.addEventListener("DOMContentLoaded", reloadFromSheet);

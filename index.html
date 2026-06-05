@@ -70,10 +70,11 @@
           <li>Utiliser <b>Scénarios</b> pour proposer une version de travail, depuis le Planning des demandes ou depuis un scénario vide.</li>
           <li>Donner un nom clair au scénario, indiquer l’auteur / club et l’objectif.</li>
           <li>Enregistrer le scénario localement.</li>
+          <li>Utiliser <b>Exporter le scénario</b> pour garder une copie, puis <b>Importer un scénario</b> pour la récupérer si besoin.</li>
           <li>Imprimer ou exporter si besoin.</li>
           <li>Signaler simplement si quelque chose ne fonctionne pas ou si un créneau manque.</li>
         </ol>
-        <div class="notice">Les scénarios sont sauvegardés localement dans le navigateur. Pour transmettre une proposition, utilisez l’impression, l’export JSON ou envoyez une capture / PDF.</div>
+        <div class="notice">Les scénarios sont sauvegardés localement dans le navigateur. Pour transmettre une proposition, utilisez l’impression, Exporter le scénario ou envoyez une capture / PDF.</div>
       </section>
       <div id="syncStatus" class="notice">Chargement...</div>
     </section>
@@ -142,12 +143,12 @@
         <button onclick="addScenarioSlot()">Ajouter un créneau</button>
         <button onclick="saveScenario()">Enregistrer le scénario</button>
         <button class="secondary" onclick="window.print()">Imprimer ce scénario</button>
-        <button class="secondary" onclick="exportScenarioJSON()">Export JSON</button>
-        <button class="secondary" onclick="openScenarioJSONImport()">Importer JSON</button>
+        <button class="secondary" onclick="exportScenarioJSON()">Exporter le scénario</button>
+        <button class="secondary" onclick="openScenarioJSONImport()">Importer un scénario</button>
         <button class="secondary" onclick="copyScenarioSummary()">Copier résumé</button>
         <button class="warn" onclick="publishActiveScenarioAsRetained()">Publier comme scénario retenu</button>
       </div>
-      <input id="scenarioJSONInput" type="file" accept=".json,application/json" hidden onchange="importScenarioJSONFile(this)" />
+      <input id="scenarioJSONInput" class="fileInputHidden" type="file" accept=".json,application/json" onchange="importScenarioJSONFile(this)" />
       <div class="scenarioMeta formgrid">
         <div><label>Nom du scénario</label><input id="scenarioName" placeholder="Scénario 1 - base actuelle corrigée" /></div>
         <div><label>Auteur</label><input id="scenarioAuthor" placeholder="Nom ou service" /></div>
@@ -193,7 +194,7 @@
         <button class="secondary" onclick="setRetainedView('club')">Vue par club</button>
         <button class="secondary" onclick="setRetainedView('category')">Vue par catégorie</button>
         <button class="secondary" onclick="window.print()">Imprimer</button>
-        <button class="secondary" onclick="exportRetainedJSON()">Export JSON</button>
+        <button class="secondary" onclick="exportRetainedJSON()">Exporter le scénario retenu</button>
         <button class="secondary" onclick="exportRetainedCSV()">Export CSV</button>
       </div>
       <div id="retainedSummary" class="demandSummary"></div>
