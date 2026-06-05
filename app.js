@@ -335,14 +335,26 @@ function formatTime(hour, minute) {
   return String(hour).padStart(2, "0") + "h" + String(minute).padStart(2, "0");
 }
 
-function initTimeDatalists() {
-  const list = $("timeOptions");
-  if (!list) return;
+function timeSelectOptions() {
   const options = [];
-  for (let value = minutes("08h00"); value <= minutes("23h30"); value += 30) {
+  for (let value = minutes("12h00"); value <= minutes("23h30"); value += 30) {
     options.push(formatTime(Math.floor(value / 60), value % 60));
   }
-  list.innerHTML = options.map(time => `<option value="${escapeHTML(time)}"></option>`).join("");
+  return options;
+}
+
+function setTimeSelectOptions(select, currentValue = "") {
+  if (!select) return;
+  const options = timeSelectOptions();
+  const current = String(currentValue || "").trim();
+  const allOptions = current && !options.includes(current) ? [current, ...options] : options;
+  select.innerHTML = allOptions.map(time => `<option value="${escapeHTML(time)}">${escapeHTML(time)}</option>`).join("");
+  select.value = current && allOptions.includes(current) ? current : allOptions[0];
+}
+
+function initTimeSelects() {
+  setTimeSelectOptions($("editDebut"), $("editDebut")?.value || "17h00");
+  setTimeSelectOptions($("editFin"), $("editFin")?.value || "18h30");
 }
 
 function timeMinutes(value) {
@@ -910,8 +922,8 @@ function fillEditDrawer(s) {
   $("editId").value = s[0];
   $("editSource").value = s[1];
   $("editJour").value = s[2];
-  $("editDebut").value = s[4];
-  $("editFin").value = s[5];
+  setTimeSelectOptions($("editDebut"), s[4]);
+  setTimeSelectOptions($("editFin"), s[5]);
   $("editNature").value = categoryValue(s);
   $("editStatut").value = s[9];
   $("editGroupe").value = usageLabel(s) === "à préciser" ? "" : usageLabel(s);
@@ -2050,7 +2062,7 @@ window.loadRetainedHistoryScenario = loadRetainedHistoryScenario;
 window.deleteRetainedHistoryScenario = deleteRetainedHistoryScenario;
 
 function initApp() {
-  initTimeDatalists();
+  initTimeSelects();
   reloadFromSheet();
 }
 
