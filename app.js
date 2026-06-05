@@ -335,6 +335,16 @@ function formatTime(hour, minute) {
   return String(hour).padStart(2, "0") + "h" + String(minute).padStart(2, "0");
 }
 
+function initTimeDatalists() {
+  const list = $("timeOptions");
+  if (!list) return;
+  const options = [];
+  for (let value = minutes("08h00"); value <= minutes("23h30"); value += 30) {
+    options.push(formatTime(Math.floor(value / 60), value % 60));
+  }
+  list.innerHTML = options.map(time => `<option value="${escapeHTML(time)}"></option>`).join("");
+}
+
 function timeMinutes(value) {
   const parsed = parseTime(value);
   return parsed ? parsed.hour * 60 + parsed.minute : null;
@@ -1007,6 +1017,7 @@ function exportCSV() {
 function renderLongProposals() {
   updateScenarioSelectLabels();
   loadScenarioMetaForm();
+  renderScenarioIdentityBanner();
   renderScenarioRecap();
   const rows = scenarios[activeScenario] || [];
   const times = longPlanningTimeLines(rows, s => s[4], s => s[5]);
@@ -1017,6 +1028,15 @@ function renderLongProposals() {
       : "Scénario affiché : 0 créneau. Utilise \"Depuis Planning des demandes\" puis \"Créer le scénario\" pour copier les demandes.";
   }
   renderEditableLongPlanning("longProposalCards", rows, { type: "scenario", scenario: activeScenario, subtitle: "Scénario éditable - non validé" });
+}
+
+function renderScenarioIdentityBanner() {
+  const banner = $("scenarioIdentityBanner");
+  if (!banner) return;
+  ensureScenarioList();
+  const meta = ensureScenarioMeta(activeScenario);
+  const rows = scenarios[activeScenario] || [];
+  banner.innerHTML = `<b>Scénario affiché</b> : ${escapeHTML(meta.name || scenarioLabel(activeScenario))} &nbsp; | &nbsp; <b>Auteur</b> : ${escapeHTML(meta.author || "-")} &nbsp; | &nbsp; <b>Date</b> : ${escapeHTML(meta.date || "-")} &nbsp; | &nbsp; <b>Statut</b> : ${escapeHTML(meta.status || "brouillon")} &nbsp; | &nbsp; <b>Créneaux</b> : ${rows.length}${meta.comment ? ` &nbsp; | &nbsp; <b>Commentaire</b> : ${escapeHTML(shortText(meta.comment, 90))}` : ""}`;
 }
 
 function renderLongDraftPlanning() {
@@ -1180,17 +1200,19 @@ function renameScenario() {
   renderLongProposals();
 }
 
-function deleteScenario() {
+function deleteScenario(id = activeScenario) {
   ensureScenarioList();
-  if (!confirm("Supprimer ce scénario local  La base mairie et le planning des demandes ne seront pas modifiés.")) return;
-  delete scenarios[activeScenario];
-  delete scenarioMeta[activeScenario];
+  const targetId = String(id || activeScenario);
+  const label = scenarioLabel(targetId);
+  if (!confirm(`Supprimer "${label}" de ce navigateur ? La base mairie, le planning des demandes et Google Sheet ne seront pas modifiés.`)) return;
+  delete scenarios[targetId];
+  delete scenarioMeta[targetId];
   if (!scenarioIds().length) {
-    const id = newScenarioId();
-    scenarios[id] = [];
-    scenarioMeta[id] = { name: "Nouveau scénario", author: "", date: todayISO(), goal: "", comment: "", status: "brouillon" };
+    const nextId = newScenarioId();
+    scenarios[nextId] = [];
+    scenarioMeta[nextId] = { name: "Nouveau scénario", author: "", date: todayISO(), goal: "", comment: "", status: "brouillon" };
   }
-  activeScenario = scenarioIds()[0];
+  if (activeScenario === targetId || !scenarios[activeScenario]) activeScenario = scenarioIds()[0];
   saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
   saveLocalObject(LOCAL_SCENARIO_META_KEY, scenarioMeta);
   renderLongProposals();
@@ -1726,7 +1748,7 @@ function renderScenarioRecap() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([club, value]) => `<span>${escapeHTML(club)}: ${value.toFixed(1)} h</span>`)
       .join("");
-    return `<article class="scenarioCard"><div class="proposalHead"><strong>${escapeHTML(scenarioLabel(id))}</strong><span class="priority">${escapeHTML(meta.status || "brouillon")}</span></div><p><b>Auteur</b><br>${escapeHTML(meta.author || "-")}</p><p><b>Total créneaux</b><br>${stats.rows.length}</p><p><b>Heures par club</b><br><span class="hoursList">${hours || "Aucune heure"}</span></p><p><b>Équipements</b><br>${escapeHTML(stats.equipments.join(", ") || "-")}</p><div class="slotActions"><button class="slotAction" onclick="openScenario('${id}')">Ouvrir</button><button class="slotAction" onclick="printScenario('${id}')">Imprimer ce scénario</button><button class="slotAction" onclick="exportScenarioJSON('${id}')">Exporter le scénario</button></div></article>`;
+    return `<article class="scenarioCard"><div class="proposalHead"><strong>${escapeHTML(scenarioLabel(id))}</strong><span class="priority">${escapeHTML(meta.status || "brouillon")}</span></div><p><b>Auteur</b><br>${escapeHTML(meta.author || "-")}</p><p><b>Date</b><br>${escapeHTML(meta.date || "-")}</p><p><b>Total créneaux</b><br>${stats.rows.length}</p><p><b>Heures par club</b><br><span class="hoursList">${hours || "Aucune heure"}</span></p><p><b>Équipements</b><br>${escapeHTML(stats.equipments.join(", ") || "-")}</p>${meta.goal ? `<p><b>Objectif</b><br>${escapeHTML(shortText(meta.goal, 100))}</p>` : ""}${meta.comment ? `<p><b>Commentaire</b><br>${escapeHTML(shortText(meta.comment, 100))}</p>` : ""}<div class="slotActions"><button class="slotAction" onclick="openScenario('${id}')">Ouvrir</button><button class="slotAction" onclick="printScenario('${id}')">Imprimer ce scénario</button><button class="slotAction" onclick="exportScenarioJSON('${id}')">Exporter le scénario</button><button class="slotAction danger" onclick="deleteScenario('${id}')">Supprimer</button></div></article>`;
   }).join("");
 }
 
@@ -1999,4 +2021,9 @@ window.openScenarioJSONImport = openScenarioJSONImport;
 window.importScenarioJSONFile = importScenarioJSONFile;
 window.loadRetainedHistoryScenario = loadRetainedHistoryScenario;
 
-document.addEventListener("DOMContentLoaded", reloadFromSheet);
+function initApp() {
+  initTimeDatalists();
+  reloadFromSheet();
+}
+
+document.addEventListener("DOMContentLoaded", initApp);

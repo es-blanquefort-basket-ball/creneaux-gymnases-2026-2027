@@ -167,6 +167,7 @@
         <textarea id="scenarioComment" placeholder="Commentaire"></textarea>
       </div>
       <div id="scenarioWorkStatus" class="notice"></div>
+      <div id="scenarioIdentityBanner" class="notice"></div>
       <div class="notice">Sauvegarde locale sur ce navigateur. Pour partager officiellement, utiliser l’export ou prévoir une sauvegarde Google Sheet.</div>
       <div id="longProposalCards"></div>
       <h2>Récapitulatif scénarios</h2>
@@ -229,8 +230,9 @@
       <input type="hidden" id="editId" />
       <div><label>Jour</label><select id="editJour"><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option><option>Dimanche</option></select></div>
       <div><label>Équipement</label><select id="editGym"></select></div>
-      <div><label>Heure début</label><input id="editDebut" /></div>
-      <div><label>Heure fin</label><input id="editFin" /></div>
+      <div><label>Heure début</label><input id="editDebut" list="timeOptions" /></div>
+      <div><label>Heure fin</label><input id="editFin" list="timeOptions" /></div>
+      <datalist id="timeOptions"></datalist>
       <div><label>Association</label><select id="editClub"></select></div>
       <div><label>Catégorie</label><input id="editNature" /></div>
       <textarea id="editGroupe" placeholder="Usage"></textarea>
