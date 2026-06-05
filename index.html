@@ -143,9 +143,11 @@
         <button onclick="saveScenario()">Enregistrer le scénario</button>
         <button class="secondary" onclick="window.print()">Imprimer ce scénario</button>
         <button class="secondary" onclick="exportScenarioJSON()">Export JSON</button>
+        <button class="secondary" onclick="openScenarioJSONImport()">Importer JSON</button>
         <button class="secondary" onclick="copyScenarioSummary()">Copier résumé</button>
         <button class="warn" onclick="publishActiveScenarioAsRetained()">Publier comme scénario retenu</button>
       </div>
+      <input id="scenarioJSONInput" type="file" accept=".json,application/json" hidden onchange="importScenarioJSONFile(this)" />
       <div class="scenarioMeta formgrid">
         <div><label>Nom du scénario</label><input id="scenarioName" placeholder="Scénario 1 - base actuelle corrigée" /></div>
         <div><label>Auteur</label><input id="scenarioAuthor" placeholder="Nom ou service" /></div>

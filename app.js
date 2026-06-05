@@ -1214,6 +1214,153 @@ function exportScenarioJSON(id = activeScenario) {
   downloadTextFile(`${safeFilename(label)}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
 }
 
+function openScenarioJSONImport() {
+  $("scenarioJSONInput")?.click();
+}
+
+function readImportField(row, names) {
+  for (const name of names) {
+    if (row && row[name] !== undefined && row[name] !== null) return row[name];
+  }
+  return "";
+}
+
+function scenarioImportMeta(data) {
+  const source = data.scenario && typeof data.scenario === "object" && !Array.isArray(data.scenario) ? data.scenario : data;
+  return {
+    importedId: String(readImportField(source, ["scenario_id", "id"]) || ""),
+    name: String(readImportField(source, ["scenario_nom", "nom", "name"]) || "Scénario importé JSON"),
+    author: String(readImportField(source, ["scenario_auteur", "auteur", "author"]) || ""),
+    date: String(readImportField(source, ["scenario_date", "date", "date_creation"]) || todayISO()),
+    status: String(readImportField(source, ["scenario_statut", "statut", "status"]) || "brouillon"),
+    comment: String(readImportField(source, ["scenario_commentaire", "commentaire", "comment"]) || "")
+  };
+}
+
+function parseImportedRows(data) {
+  const candidates = [
+    data?.creneaux,
+    data?.creneaux_json,
+    data?.slots,
+    data?.scenario?.creneaux
+  ];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (Array.isArray(candidate)) return candidate;
+    if (typeof candidate === "string") {
+      try {
+        const parsed = JSON.parse(candidate);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {
+        return null;
+      }
+    }
+  }
+  return [];
+}
+
+function normalizeImportedScenarioSlot(row, index, scenarioId) {
+  if (Array.isArray(row)) {
+    const copy = copySlot(row);
+    copy[0] = `${scenarioId}-${String(index + 1).padStart(3, "0")}`;
+    copy[1] = copy[1] || "Import JSON";
+    copy[3] = normalizeEquipment(copy[3]);
+    copy[4] = copy[4] ? normalizeTimeForWork(copy[4]) : "";
+    copy[5] = copy[5] ? normalizeTimeForWork(copy[5]) : "";
+    if (!categoryValue(copy)) copy[8] = "Catégorie à préciser";
+    if (!copy[4] || !copy[5]) copy[10] = [copy[10], "Horaire à préciser"].filter(Boolean).join(" - ");
+    return copy;
+  }
+
+  const start = String(readImportField(row, ["heure_debut", "debut", "start"]) || "").trim();
+  const end = String(readImportField(row, ["heure_fin", "fin", "end"]) || "").trim();
+  const category = String(readImportField(row, ["categorie", "catégorie", "nature"]) || "").trim() || "Catégorie à préciser";
+  const noteParts = [readImportField(row, ["note", "commentaire", "comment"])].map(v => String(v || "").trim()).filter(Boolean);
+  if (!start || !end) noteParts.push("Horaire à préciser");
+
+  return [
+    `${scenarioId}-${String(index + 1).padStart(3, "0")}`,
+    String(readImportField(row, ["origine", "source"]) || "Import JSON"),
+    String(readImportField(row, ["jour", "day"]) || "").trim(),
+    normalizeEquipment(readImportField(row, ["equipement", "équipement", "gymnase"])),
+    start ? normalizeTimeForWork(start) : "",
+    end ? normalizeTimeForWork(end) : "",
+    String(readImportField(row, ["club", "association"]) || "").trim() || "Libre / a arbitrer",
+    String(readImportField(row, ["usage"]) || "").trim(),
+    category,
+    String(readImportField(row, ["statut", "status"]) || "Import JSON"),
+    noteParts.join(" - ")
+  ];
+}
+
+function saveImportedSlotMeta(slot, sourceRow) {
+  const requestStatusValue = readImportField(sourceRow, ["statut_demande", "requestStatus"]);
+  const priorityValueImported = readImportField(sourceRow, ["priorite", "priorité", "priority"]);
+  const replaceSlotImported = readImportField(sourceRow, ["remplace_creneau", "replaceSlot"]);
+  const hasMeta = requestStatusValue || priorityValueImported || replaceSlotImported;
+  if (!hasMeta) return;
+  slotMeta[slot[0]] = {
+    ...getSlotMeta(slot[0]),
+    requestStatus: requestStatusValue || requestStatus(slot),
+    statut_demande: requestStatusValue || requestStatus(slot),
+    priority: priorityValueImported || "",
+    replaceSlot: replaceSlotImported || ""
+  };
+}
+
+function importScenarioJSONData(data) {
+  const importedRows = parseImportedRows(data);
+  if (importedRows === null) {
+    toast("Import impossible : fichier JSON invalide.");
+    return;
+  }
+  if (!importedRows.length) {
+    toast("Import impossible : aucun créneau trouvé dans ce fichier.");
+    return;
+  }
+
+  const id = newScenarioId();
+  const meta = scenarioImportMeta(data);
+  const rows = importedRows.map((row, index) => normalizeImportedScenarioSlot(row, index, id));
+  importedRows.forEach((row, index) => saveImportedSlotMeta(rows[index], row));
+
+  scenarios[id] = rows;
+  scenarioMeta[id] = {
+    name: meta.name || "Scénario importé JSON",
+    author: meta.author,
+    date: meta.date || todayISO(),
+    goal: meta.importedId ? "Import JSON du scénario " + meta.importedId : "Import JSON",
+    comment: meta.comment,
+    status: meta.status || "brouillon"
+  };
+  activeScenario = id;
+  saveLocalObject(LOCAL_SCENARIOS_KEY, scenarios);
+  saveLocalObject(LOCAL_SCENARIO_META_KEY, scenarioMeta);
+  saveLocalObject(LOCAL_SLOT_META_KEY, slotMeta);
+  renderLongProposals();
+  toast(`Scénario JSON importé : ${rows.length} créneau(x).`);
+}
+
+function importScenarioJSONFile(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      importScenarioJSONData(JSON.parse(String(reader.result || "")));
+    } catch (e) {
+      toast("Import impossible : fichier JSON invalide.");
+    } finally {
+      input.value = "";
+    }
+  };
+  reader.onerror = () => {
+    toast("Import impossible : fichier JSON invalide.");
+    input.value = "";
+  };
+  reader.readAsText(file, "utf-8");
+}
+
 function retainedStatusLabel(value) {
   return RETAINED_SLOT_STATUS[value] || value || "Retenu";
 }
