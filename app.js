@@ -1623,7 +1623,6 @@ function renderScenarioRetenu() {
   $("retainedSummary").innerHTML = [
     ["Créneaux affichés", rows.length],
     ["Heures affichées", formatHours(totalHours)],
-    ["Sans catégorie", missingCategories],
     ["Vue", retainedViewMode === "planning" ? "Planning" : "Par club"]
   ].map(([label, value]) => `<div class="summaryPill"><b>${escapeHTML(label)}</b><span>${escapeHTML(value)}</span></div>`).join("");
   if (history) history.innerHTML = renderRetainedHistory();
@@ -1860,8 +1859,9 @@ function renderEditableLongPlanning(containerId, rows, options = {}) {
       const overlapStyle = layout.count > 1 ? `width:calc(100% / ${layout.count});margin-left:calc(${layout.lane} * 100% / ${layout.count});` : "";
       const category = categoryValue(s);
       const usage = usageLabel(s);
-      const note = displayNote(s);
-      return `<div class="meetingBlock editableBlock slot ${clubClass(s[6])} ${requestStatusClass(s)}" onclick="openEdit('${escapeHTML(s[0])}', '${escapeHTML(type)}', '${escapeHTML(scenario)}')" style="grid-column:${dayIndex + 2};grid-row:${startLine}/${endLine};${overlapStyle}"><strong>${escapeHTML(s[6])}</strong><span>${escapeHTML(s[4])}-${escapeHTML(s[5])}</span><span>${escapeHTML(requestStatusLabel(s))}</span>${category ? `<span>Cat. ${escapeHTML(shortText(category, 28))}</span>` : ""}${usage !== "à préciser" ? `<span>${escapeHTML(shortText(usage, 32))}</span>` : ""}${note ? `<span>Note: ${escapeHTML(shortText(note, 34))}</span>` : ""}${deleteButton}</div>`;
+      const categoryLine = category ? `<span>${escapeHTML(shortText(category, 28))}</span>` : "";
+      const usageLine = usage !== "à préciser" ? `<span>${escapeHTML(shortText(usage, 32))}</span>` : "";
+      return `<div class="meetingBlock editableBlock slot ${clubClass(s[6])} ${requestStatusClass(s)}" onclick="openEdit('${escapeHTML(s[0])}', '${escapeHTML(type)}', '${escapeHTML(scenario)}')" style="grid-column:${dayIndex + 2};grid-row:${startLine}/${endLine};${overlapStyle}"><strong>${escapeHTML(s[6])}</strong><span>${escapeHTML(s[4])}-${escapeHTML(s[5])}</span>${categoryLine}${usageLine}${deleteButton}</div>`;
     }).join("");
 
     return `<section class="meetingGym"><div class="meetingGymHead"><h3>${escapeHTML(gym)}</h3>${options.subtitle ? `<span>${escapeHTML(options.subtitle)}</span>` : ""}</div><div class="meetingGrid" style="--row-count:${rowCount}">${meetingGridChrome(times)}${blocks}</div></section>`;
