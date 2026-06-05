@@ -199,8 +199,8 @@
         <button class="secondary" onclick="exportRetainedCSV()">Export CSV</button>
       </div>
       <div id="retainedSummary" class="demandSummary"></div>
-      <div class="notice miniNotice futsalNotice"><b>Point Futsal</b> : créneau du dimanche à caler à 16h30 ou 20h30 au Port du Roy, modulable avec Fongravey selon les horaires de match du week-end.</div>
       <div id="retainedHistory" class="scenarioRecap"></div>
+      <div class="notice futsalNotice"><b>Point Futsal</b><br>Créneau du dimanche à caler à <b>16h30</b> ou <b>20h30</b> au <b>Port du Roy</b>, modulable avec <b>Fongravey</b> selon les horaires de match du week-end.</div>
       <div id="retainedContent"></div>
     </section>
 
@@ -223,9 +223,8 @@
       <input type="hidden" id="editId" />
       <div><label>Jour</label><select id="editJour"><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option><option>Dimanche</option></select></div>
       <div><label>Équipement</label><select id="editGym"></select></div>
-      <div><label>Heure début</label><input id="editDebut" list="timeOptions" /></div>
-      <div><label>Heure fin</label><input id="editFin" list="timeOptions" /></div>
-      <datalist id="timeOptions"></datalist>
+      <div><label>Heure début</label><select id="editDebut"></select></div>
+      <div><label>Heure fin</label><select id="editFin"></select></div>
       <div><label>Association</label><select id="editClub"></select></div>
       <div><label>Catégorie</label><input id="editNature" /></div>
       <textarea id="editGroupe" placeholder="Usage"></textarea>
@@ -249,6 +248,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <button id="floatingAddSlot" class="floatingAddSlot" onclick="floatingAddSlot()">+ Ajouter un créneau</button>
   <script src="app.js"></script>
 </body>
 </html>

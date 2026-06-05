@@ -316,6 +316,7 @@ function showTab(id, btn) {
   $(id)?.classList.add("active");
   document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
+  updateFloatingAddButton();
   renderActiveView();
 }
 
@@ -819,6 +820,7 @@ function activeSectionId() {
 
 function renderActiveView() {
   const id = activeSectionId();
+  updateFloatingAddButton();
   if (id === "modifier") renderPlanning();
   if (id === "gymnases") renderCards();
   if (id === "parClub") renderClubView();
@@ -826,6 +828,26 @@ function renderActiveView() {
   if (id === "propositionsLongues") renderLongProposals();
   if (id === "scenarioRetenu") loadScenarioRetenu();
   if (id === "viergeLong") renderLongDraftPlanning();
+}
+
+function updateFloatingAddButton() {
+  const button = $("floatingAddSlot");
+  if (!button) return;
+  const id = activeSectionId();
+  const retainedClubView = id === "parClub" && $("clubViewSource")?.value === "retained";
+  const visible = ["modifier", "parClub", "propositionsLongues", "viergeLong"].includes(id) && !retainedClubView;
+  button.style.display = visible ? "" : "none";
+  if (id === "propositionsLongues") button.textContent = "+ Ajouter au scénario";
+  else if (id === "viergeLong") button.textContent = "+ Ajouter au planning vierge";
+  else button.textContent = "+ Ajouter un créneau";
+}
+
+function floatingAddSlot() {
+  const id = activeSectionId();
+  if (id === "propositionsLongues") return addScenarioSlot();
+  if (id === "viergeLong") return addBlankSlot();
+  if (id === "scenarioRetenu" || id === "accueil") return;
+  return addSlot();
 }
 
 function selectSlot(id) {
@@ -1895,6 +1917,7 @@ function renderClubView() {
   const container = $("clubView");
   if (!container) return;
   const source = $("clubViewSource")?.value || "work";
+  updateFloatingAddButton();
   if ($("clubAddSlotButton")) $("clubAddSlotButton").style.display = source === "retained" ? "none" : "";
   if (source === "retained") {
     renderRetainedClubSource(container);
@@ -2060,6 +2083,7 @@ window.openScenarioJSONImport = openScenarioJSONImport;
 window.importScenarioJSONFile = importScenarioJSONFile;
 window.loadRetainedHistoryScenario = loadRetainedHistoryScenario;
 window.deleteRetainedHistoryScenario = deleteRetainedHistoryScenario;
+window.floatingAddSlot = floatingAddSlot;
 
 function initApp() {
   initTimeSelects();
