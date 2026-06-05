@@ -107,6 +107,11 @@ function doPost(e) {
       return json_({ ok: true, message: "Scénario publié comme retenu" });
     }
 
+    if (action === "deletescenariofromsheet") {
+      deleteScenarioFromSheet_(data.scenario_id || "", data.auteur || "");
+      return json_({ ok: true, message: "Scénario supprimé de l'historique" });
+    }
+
     return json_({ ok: false, error: "Action POST inconnue" });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
@@ -260,6 +265,29 @@ function publishScenarioRetenu_(scenario, rows) {
     ancienne_valeur: "",
     nouvelle_valeur: retainedRows.length + " creneau(x)",
     note: scenario.nom || scenario.scenario_nom || ""
+  });
+}
+
+function deleteScenarioFromSheet_(scenarioId, auteur) {
+  scenarioId = String(scenarioId || "");
+  if (!scenarioId) throw new Error("scenario_id manquant");
+
+  const scenarios = readSheet_(SHEETS.SCENARIOS)
+    .filter(row => String(row.scenario_id || "") !== scenarioId);
+  const creneaux = readSheet_(SHEETS.SCENARIO_CRENEAUX)
+    .filter(row => String(row.scenario_id || "") !== scenarioId);
+
+  replaceObjectRows_(SHEETS.SCENARIOS, HEADERS.SCENARIOS, scenarios);
+  replaceObjectRows_(SHEETS.SCENARIO_CRENEAUX, HEADERS.SCENARIO_CRENEAUX, creneaux);
+  appendLogModif_({
+    date: new Date(),
+    auteur: auteur || "",
+    action: "deleteScenarioFromSheet",
+    scenario_id: scenarioId,
+    creneau_id: "",
+    ancienne_valeur: scenarioId,
+    nouvelle_valeur: "",
+    note: "Suppression historique scénario"
   });
 }
 

@@ -812,7 +812,7 @@ function renderActiveView() {
   if (id === "parClub") renderClubView();
   if (id === "propositionsClub") renderCurrentBaseView();
   if (id === "propositionsLongues") renderLongProposals();
-  if (id === "scenarioRetenu") renderScenarioRetenu();
+  if (id === "scenarioRetenu") loadScenarioRetenu();
   if (id === "viergeLong") renderLongDraftPlanning();
 }
 
@@ -1535,6 +1535,26 @@ async function loadRetainedHistoryScenario(scenarioId) {
   }
 }
 
+async function deleteRetainedHistoryScenario(scenarioId) {
+  if (!scenarioId) return;
+  if (String(scenarioId) === String(retainedScenarioMeta.scenario_id || "")) {
+    toast("La version affichée ne peut pas être supprimée depuis l'historique.");
+    return;
+  }
+  const row = retainedScenarioHistory.find(item => String(item.scenario_id || "") === String(scenarioId)) || {};
+  const label = row.nom || "cette ancienne version";
+  if (!confirm(`Supprimer "${label}" de l'historique partagé ?`)) return;
+  try {
+    await postToSheet("deleteScenarioFromSheet", { scenario_id: scenarioId, auteur: row.auteur || "" });
+    retainedScenarioHistory = retainedScenarioHistory.filter(item => String(item.scenario_id || "") !== String(scenarioId));
+    renderScenarioRetenu();
+    setTimeout(loadScenarioRetenu, 1200);
+    toast("Suppression envoyée vers Google Sheet");
+  } catch (e) {
+    toast("Suppression impossible : " + e.message);
+  }
+}
+
 function retainedFilterValue(id, fallback = "Tous") {
   return $(id)?.value || fallback;
 }
@@ -1591,7 +1611,7 @@ function renderScenarioRetenu() {
     renderRetainedFilters();
     $("retainedSummary").innerHTML = "";
     if (history) history.innerHTML = renderRetainedHistory();
-    $("retainedStatus").textContent = "Aucun scénario retenu chargé. Publie un scénario depuis l'onglet Scénarios ou clique sur Recharger.";
+    if ($("retainedStatus")) $("retainedStatus").textContent = "";
     content.innerHTML = '<div class="emptyClub">Aucun scénario retenu disponible pour le moment.</div>';
     return;
   }
@@ -1599,7 +1619,7 @@ function renderScenarioRetenu() {
   const rows = retainedFilteredRows();
   const totalHours = rows.reduce((sum, row) => sum + retainedDurationHours(row), 0);
   const missingCategories = rows.filter(retainedHasMissingCategory).length;
-  $("retainedStatus").textContent = `Scénario retenu : ${retainedScenarioSlots.length} créneau(x) chargé(s). Vue filtrée : ${rows.length} créneau(x).`;
+  if ($("retainedStatus")) $("retainedStatus").textContent = "";
   $("retainedSummary").innerHTML = [
     ["Créneaux affichés", rows.length],
     ["Heures affichées", formatHours(totalHours)],
@@ -1627,7 +1647,8 @@ function renderRetainedHistory() {
     const archived = statusKey.includes("archiv") || statusKey.includes("refus") || statusKey.includes("supprim");
     const cardClass = isDisplayed ? "current" : archived ? "archived" : "past";
     const modified = row.date_modification || row.date_creation || "-";
-    return `<article class="retainedHistoryCard ${cardClass}"><div class="retainedHistoryHead"><strong>${escapeHTML(shortText(row.nom || "Scénario sans nom", 42))}</strong><span>${escapeHTML(row.statut || "-")}</span></div><div class="retainedHistoryMeta"><b>Auteur</b> ${escapeHTML(row.auteur || "-")}</div><div class="retainedHistoryMeta"><b>Modifié</b> ${escapeHTML(modified)}</div>${row.commentaire ? `<div class="retainedHistoryMeta">${escapeHTML(shortText(row.commentaire, 70))}</div>` : ""}<button class="slotAction ${isDisplayed ? "currentAction" : ""}" onclick="loadRetainedHistoryScenario('${escapeHTML(id)}')">${isDisplayed ? "Version affichée" : "Afficher"}</button></article>`;
+    const deleteButton = isDisplayed ? "" : `<button class="slotAction danger" onclick="deleteRetainedHistoryScenario('${escapeHTML(id)}')">Supprimer</button>`;
+    return `<article class="retainedHistoryCard ${cardClass}"><div class="retainedHistoryHead"><strong>${escapeHTML(shortText(row.nom || "Scénario sans nom", 42))}</strong><span>${escapeHTML(row.statut || "-")}</span></div><div class="retainedHistoryMeta"><b>Auteur</b> ${escapeHTML(row.auteur || "-")}</div><div class="retainedHistoryMeta"><b>Modifié</b> ${escapeHTML(modified)}</div>${row.commentaire ? `<div class="retainedHistoryMeta">${escapeHTML(shortText(row.commentaire, 70))}</div>` : ""}<div class="slotActions"><button class="slotAction ${isDisplayed ? "currentAction" : ""}" onclick="loadRetainedHistoryScenario('${escapeHTML(id)}')">${isDisplayed ? "Version affichée" : "Afficher"}</button>${deleteButton}</div></article>`;
   }).join("")}</div>`;
 }
 
@@ -2026,6 +2047,7 @@ function downloadTextFile(filename, content, type) {
 window.openScenarioJSONImport = openScenarioJSONImport;
 window.importScenarioJSONFile = importScenarioJSONFile;
 window.loadRetainedHistoryScenario = loadRetainedHistoryScenario;
+window.deleteRetainedHistoryScenario = deleteRetainedHistoryScenario;
 
 function initApp() {
   initTimeDatalists();
