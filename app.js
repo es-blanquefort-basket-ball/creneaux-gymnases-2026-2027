@@ -2000,33 +2000,85 @@ function clubGroup(association) {
   return "Autres";
 }
 
+function clubWeekOverlapLayout(items, startForItem, endForItem, dayForItem) {
+  const layouts = {};
+  LONG_DAYS.forEach(day => {
+    const dayItems = items
+      .filter(item => dayForItem(item) === day)
+      .sort((a, b) => minutes(startForItem(a)) - minutes(startForItem(b)) || minutes(endForItem(a)) - minutes(endForItem(b)));
+    const lanes = [];
+    dayItems.forEach(item => {
+      const start = minutes(startForItem(item));
+      const end = minutes(endForItem(item));
+      let lane = lanes.findIndex(lastEnd => lastEnd <= start);
+      if (lane < 0) {
+        lane = lanes.length;
+        lanes.push(end);
+      } else {
+        lanes[lane] = end;
+      }
+      layouts[item.index] = { lane, count: 1 };
+    });
+    dayItems.forEach(item => {
+      const start = minutes(startForItem(item));
+      const end = minutes(endForItem(item));
+      const overlapping = dayItems.filter(other => minutes(startForItem(other)) < end && minutes(endForItem(other)) > start);
+      layouts[item.index].count = Math.max(...overlapping.map(other => (layouts[other.index]?.lane ?? 0) + 1), 1);
+    });
+  });
+  return layouts;
+}
+
 function renderClubSlotPlanning(rows) {
   if (!rows.length) return '<div class="emptyClub">Aucun créneau chargé.</div>';
   const times = longPlanningTimeLines(rows, s => s[4], s => s[5]);
   const first = minutes(times[0]);
   const last = minutes(times[times.length - 1]);
   const rowCount = times.length - 1;
-  const gyms = equipmentListFor(rows);
-
-  return `<div class="clubPlanning">${gyms.map(gym => {
-    const layouts = overlapLayout(rows, gym);
-    const blocks = rows.filter(s => normalizeEquipment(s[3]) === gym).map(s => {
+  const items = rows.map((row, index) => ({ row, index }));
+  const layouts = clubWeekOverlapLayout(items, item => item.row[4], item => item.row[5], item => item.row[2]);
+  const blocks = items.map(item => {
+      const s = item.row;
       const start = minutes(s[4]);
       const end = minutes(s[5]);
       const startLine = Math.round((Math.max(start, first) - first) / 30) + 2;
       const endLine = Math.round((Math.min(end, last) - first) / 30) + 2;
       const dayIndex = LONG_DAYS.indexOf(s[2]);
       if (dayIndex < 0 || end <= first || start >= last || endLine <= startLine) return "";
-      const layout = layouts[s[0]] || { lane: 0, count: 1 };
+      const layout = layouts[item.index] || { lane: 0, count: 1 };
       const overlapStyle = layout.count > 1 ? `width:calc(100% / ${layout.count});margin-left:calc(${layout.lane} * 100% / ${layout.count});` : "";
       const category = categoryValue(s);
       const usage = usageLabel(s);
       const categoryLine = category ? `<span>${escapeHTML(shortText(category, 26))}</span>` : "";
       const usageLine = usage !== "à préciser" ? `<span>${escapeHTML(shortText(usage, 28))}</span>` : "";
-      return `<div class="meetingBlock editableBlock slot ${clubClass(s[6])} ${requestStatusClass(s)}" onclick="openEdit('${escapeHTML(s[0])}', 'work')" style="grid-column:${dayIndex + 2};grid-row:${startLine}/${endLine};${overlapStyle}"><strong>${escapeHTML(s[4])}-${escapeHTML(s[5])}</strong>${categoryLine}${usageLine}</div>`;
+      return `<div class="meetingBlock editableBlock slot ${clubClass(s[6])} ${requestStatusClass(s)}" onclick="openEdit('${escapeHTML(s[0])}', 'work')" style="grid-column:${dayIndex + 2};grid-row:${startLine}/${endLine};${overlapStyle}"><strong>${escapeHTML(s[4])}-${escapeHTML(s[5])}</strong><span class="equipmentChip">${escapeHTML(normalizeEquipment(s[3]))}</span>${categoryLine}${usageLine}</div>`;
     }).join("");
-    return `<section class="meetingGym"><div class="meetingGymHead"><h3>${escapeHTML(gym)}</h3><span>${rows.filter(s => normalizeEquipment(s[3]) === gym).length} créneau(x)</span></div><div class="meetingGrid" style="--row-count:${rowCount}">${meetingGridChrome(times)}${blocks}</div></section>`;
-  }).join("")}</div>`;
+  return `<div class="clubPlanning"><section class="meetingGym"><div class="meetingGymHead"><h3>Planning hebdomadaire</h3><span>${rows.length} créneau(x)</span></div><div class="meetingGrid" style="--row-count:${rowCount}">${meetingGridChrome(times)}${blocks}</div></section></div>`;
+}
+
+function renderRetainedClubPlanning(rows) {
+  if (!rows.length) return '<div class="emptyClub">Aucun créneau chargé.</div>';
+  const times = longPlanningTimeLines(rows, row => row.heure_debut, row => row.heure_fin);
+  const first = minutes(times[0]);
+  const last = minutes(times[times.length - 1]);
+  const rowCount = times.length - 1;
+  const items = rows.map((row, index) => ({ row, index }));
+  const layouts = clubWeekOverlapLayout(items, item => item.row.heure_debut, item => item.row.heure_fin, item => item.row.jour);
+  const blocks = items.map(item => {
+    const row = item.row;
+    const start = minutes(row.heure_debut);
+    const end = minutes(row.heure_fin);
+    const startLine = Math.round((Math.max(start, first) - first) / 30) + 2;
+    const endLine = Math.round((Math.min(end, last) - first) / 30) + 2;
+    const dayIndex = LONG_DAYS.indexOf(row.jour);
+    if (dayIndex < 0 || end <= first || start >= last || endLine <= startLine) return "";
+    const layout = layouts[item.index] || { lane: 0, count: 1 };
+    const overlapStyle = layout.count > 1 ? `width:calc(100% / ${layout.count});margin-left:calc(${layout.lane} * 100% / ${layout.count});` : "";
+    const usage = row.usage && row.usage !== "à préciser" ? `<span>${escapeHTML(shortText(row.usage, 28))}</span>` : "";
+    const missing = retainedHasMissingCategory(row) ? '<span>Catégorie à préciser</span>' : `<span>${escapeHTML(shortText(retainedCategoryValue(row), 26))}</span>`;
+    return `<div class="meetingBlock slot ${clubClass(row.club)} ${retainedStatusClass(row.statut_creneau)}" style="grid-column:${dayIndex + 2};grid-row:${startLine}/${endLine};${overlapStyle}"><strong>${escapeHTML(row.heure_debut)}-${escapeHTML(row.heure_fin)}</strong><span class="equipmentChip">${escapeHTML(normalizeEquipment(row.equipement))}</span>${missing}${usage}</div>`;
+  }).join("");
+  return `<div class="clubPlanning"><section class="meetingGym"><div class="meetingGymHead"><h3>Planning hebdomadaire</h3><span>${rows.length} créneau(x)</span></div><div class="meetingGrid" style="--row-count:${rowCount}">${meetingGridChrome(times)}${blocks}</div></section></div>`;
 }
 
 function renderClubView() {
@@ -2085,7 +2137,7 @@ function renderRetainedClubSource(container) {
       .map(status => `<span>${escapeHTML(retainedStatusLabel(status))}: ${list.filter(row => (row.statut_creneau || "retenu") === status).length}</span>`)
       .join("");
     const summary = `<div class="clubStats"><span>Total ${formatHours(total)}</span><span>${list.length} créneau(x)</span>${missingCategories ? `<span>${missingCategories} catégorie(s) à préciser</span>` : ""}${statusSummary}</div>`;
-    return `<section class="clubGroup ${clubClass(group)}"><div class="clubGroupHead"><h3>${escapeHTML(group)}</h3><span>Scénario retenu - ${formatHours(total)}</span></div>${summary}<div class="clubPlanning">${renderRetainedPlanning(list)}</div></section>`;
+    return `<section class="clubGroup ${clubClass(group)}"><div class="clubGroupHead"><h3>${escapeHTML(group)}</h3><span>Scénario retenu - ${formatHours(total)}</span></div>${summary}${renderRetainedClubPlanning(list)}</section>`;
   }).join("");
 }
 
