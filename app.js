@@ -256,6 +256,12 @@ function normalizeTimeForWork(value) {
   return formatTime(parsed.hour, parsed.minute);
 }
 
+function normalizeManualTime(value) {
+  const parsed = parseTime(value);
+  if (!parsed) return String(value || "");
+  return formatTime(parsed.hour, parsed.minute);
+}
+
 function normalizeSlotForWork(s) {
   const copy = copySlot(s);
   copy[3] = normalizeEquipment(copy[3]);
@@ -338,7 +344,7 @@ function formatTime(hour, minute) {
 
 function timeSelectOptions() {
   const options = [];
-  for (let value = minutes("12h00"); value <= minutes("23h30"); value += 30) {
+  for (let value = minutes("08h00"); value <= minutes("23h45"); value += 15) {
     options.push(formatTime(Math.floor(value / 60), value % 60));
   }
   return options;
@@ -1028,8 +1034,8 @@ function saveEdit() {
   s[1] = $("editSource").value;
   s[2] = $("editJour").value;
   s[3] = normalizeEquipment($("editGym").value);
-  s[4] = normalizeTimeForWork($("editDebut").value);
-  s[5] = normalizeTimeForWork($("editFin").value);
+  s[4] = normalizeManualTime($("editDebut").value);
+  s[5] = normalizeManualTime($("editFin").value);
   s[6] = $("editClub").value;
   s[7] = $("editGroupe").value;
   s[8] = $("editNature").value;
@@ -1044,8 +1050,8 @@ function saveEdit() {
 }
 
 function saveSlotMetaFromDrawer(s) {
-  const start = normalizeTimeForWork($("editDebut").value.trim());
-  const end = normalizeTimeForWork($("editFin").value.trim());
+  const start = normalizeManualTime($("editDebut").value.trim());
+  const end = normalizeManualTime($("editFin").value.trim());
   slotMeta[s[0]] = {
     confirmedStart: start,
     confirmedEnd: end,
@@ -1994,6 +2000,35 @@ function clubGroup(association) {
   return "Autres";
 }
 
+function renderClubSlotPlanning(rows) {
+  if (!rows.length) return '<div class="emptyClub">Aucun créneau chargé.</div>';
+  const times = longPlanningTimeLines(rows, s => s[4], s => s[5]);
+  const first = minutes(times[0]);
+  const last = minutes(times[times.length - 1]);
+  const rowCount = times.length - 1;
+  const gyms = equipmentListFor(rows);
+
+  return `<div class="clubPlanning">${gyms.map(gym => {
+    const layouts = overlapLayout(rows, gym);
+    const blocks = rows.filter(s => normalizeEquipment(s[3]) === gym).map(s => {
+      const start = minutes(s[4]);
+      const end = minutes(s[5]);
+      const startLine = Math.round((Math.max(start, first) - first) / 30) + 2;
+      const endLine = Math.round((Math.min(end, last) - first) / 30) + 2;
+      const dayIndex = LONG_DAYS.indexOf(s[2]);
+      if (dayIndex < 0 || end <= first || start >= last || endLine <= startLine) return "";
+      const layout = layouts[s[0]] || { lane: 0, count: 1 };
+      const overlapStyle = layout.count > 1 ? `width:calc(100% / ${layout.count});margin-left:calc(${layout.lane} * 100% / ${layout.count});` : "";
+      const category = categoryValue(s);
+      const usage = usageLabel(s);
+      const categoryLine = category ? `<span>${escapeHTML(shortText(category, 26))}</span>` : "";
+      const usageLine = usage !== "à préciser" ? `<span>${escapeHTML(shortText(usage, 28))}</span>` : "";
+      return `<div class="meetingBlock editableBlock slot ${clubClass(s[6])} ${requestStatusClass(s)}" onclick="openEdit('${escapeHTML(s[0])}', 'work')" style="grid-column:${dayIndex + 2};grid-row:${startLine}/${endLine};${overlapStyle}"><strong>${escapeHTML(s[4])}-${escapeHTML(s[5])}</strong>${categoryLine}${usageLine}</div>`;
+    }).join("");
+    return `<section class="meetingGym"><div class="meetingGymHead"><h3>${escapeHTML(gym)}</h3><span>${rows.filter(s => normalizeEquipment(s[3]) === gym).length} créneau(x)</span></div><div class="meetingGrid" style="--row-count:${rowCount}">${meetingGridChrome(times)}${blocks}</div></section>`;
+  }).join("")}</div>`;
+}
+
 function renderClubView() {
   const container = $("clubView");
   if (!container) return;
@@ -2015,14 +2050,9 @@ function renderClubView() {
       .filter(s => clubGroup(s[6]) === group)
       .sort((a, b) => DAYS.indexOf(a[2]) - DAYS.indexOf(b[2]) || normalizeEquipment(a[3]).localeCompare(normalizeEquipment(b[3])) || minutes(a[4]) - minutes(b[4]));
     const metrics = requestMetrics(list);
-    const rows = list.length ? list.map(s => {
-      const status = getTimeStatus(s);
-      const note = shortText(displayNote(s), 58);
-      const replaceText = shortText(replaceSlotText(s), 58);
-      return `<div class="clubSlot compact ${clubClass(s[6])} ${requestStatusClass(s)}"><div class="clubSlotHead"><strong>${escapeHTML(s[6] || "Sans association")}</strong></div><div class="clubMiniLine"><b>Catégorie</b><span>${escapeHTML(categoryLabel(s))}</span></div><div class="clubMiniLine"><b>Usage</b><span>${escapeHTML(shortText(usageLabel(s), 44))}</span></div><div class="clubMiniLine"><b>Équipement</b><span>${escapeHTML(normalizeEquipment(s[3]))}</span></div><div class="clubMiniLine"><b>Jour</b><span>${escapeHTML(s[2])} ${escapeHTML(s[4])}-${escapeHTML(s[5])}</span></div><div class="clubMiniLine"><b>Demande</b><span>${escapeHTML(requestStatusLabel(s))}</span></div><div class="clubMiniLine"><b>Priorité</b><span>${escapeHTML(priorityLabel(s))}</span></div>${note ? `<div class="clubMiniLine"><b>Note</b><span>${escapeHTML(note)}</span></div>` : ""}${replaceText ? `<div class="clubMiniLine"><b>Remplace</b><span>${escapeHTML(replaceText)}</span></div>` : ""}<div class="clubMiniLine"><b>Statut</b><span>${escapeHTML(displayStatus(s))}</span></div><div class="clubCardFoot"><span class="requestBadge ${requestStatusClass(s)}">${escapeHTML(requestStatusLabel(s))}</span><button class="slotAction" onclick="openEdit('${escapeHTML(s[0])}', 'work')">Modifier</button></div></div>`;
-    }).join("") : '<div class="emptyClub">Aucun créneau chargé.</div>';
+    const rows = renderClubSlotPlanning(list);
     const summary = `<div class="clubStats"><span>Total ${formatHours(metrics.total)}</span><span>Conserver ${formatHours(metrics.existant_a_conserver)}</span><span>En plus ${formatHours(metrics.demande_en_plus)}</span><span>Libérables ${formatHours(metrics.a_liberer)}</span><span>À déplacer ${formatHours(metrics.a_deplacer)}</span></div>`;
-    return `<section class="clubGroup ${clubClass(group)}"><div class="clubGroupHead"><h3>${escapeHTML(group)}</h3><span>${formatHours(metrics.total)}</span></div>${summary}<div class="clubSlotsGrid">${rows}</div></section>`;
+    return `<section class="clubGroup ${clubClass(group)}"><div class="clubGroupHead"><h3>${escapeHTML(group)}</h3><span>${formatHours(metrics.total)}</span></div>${summary}${rows}</section>`;
   }).join("");
 }
 
@@ -2055,7 +2085,7 @@ function renderRetainedClubSource(container) {
       .map(status => `<span>${escapeHTML(retainedStatusLabel(status))}: ${list.filter(row => (row.statut_creneau || "retenu") === status).length}</span>`)
       .join("");
     const summary = `<div class="clubStats"><span>Total ${formatHours(total)}</span><span>${list.length} créneau(x)</span>${missingCategories ? `<span>${missingCategories} catégorie(s) à préciser</span>` : ""}${statusSummary}</div>`;
-    return `<section class="clubGroup ${clubClass(group)}"><div class="clubGroupHead"><h3>${escapeHTML(group)}</h3><span>Scénario retenu - ${formatHours(total)}</span></div>${summary}<div class="clubSlotsGrid">${list.map(renderRetainedCard).join("")}</div></section>`;
+    return `<section class="clubGroup ${clubClass(group)}"><div class="clubGroupHead"><h3>${escapeHTML(group)}</h3><span>Scénario retenu - ${formatHours(total)}</span></div>${summary}<div class="clubPlanning">${renderRetainedPlanning(list)}</div></section>`;
   }).join("");
 }
 
